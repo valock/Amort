@@ -1,0 +1,3 @@
+# Site estático (HTML/CSS/JS) — sem build. Publica a raiz do repositório.
+[build]
+  publish = "."

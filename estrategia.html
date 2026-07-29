@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Acelerador de Quitação — A Estratégia</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="assets/icons/icon-192.png" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<main>
+  <h1 id="nome-cliente">Cliente</h1>
+  <h2>Tela 2 — A Estratégia (pós-chaves)</h2>
+
+  <div class="section">
+    <h3>Financiamento</h3>
+    <div class="summary-line">
+      <span>Valor financiado (definido na Tela 1)</span>
+      <span class="total" id="valorFinanciadoLabel">R$ 0</span>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="prazoMeses">Prazo do financiamento (meses)</label>
+        <input id="prazoMeses" type="number" inputmode="numeric" placeholder="420" />
+      </div>
+      <div class="field">
+        <label for="taxaAnual">Taxa de juros anual (%)</label>
+        <input id="taxaAnual" type="number" inputmode="decimal" step="0.01" placeholder="10,00" />
+      </div>
+    </div>
+    <label>Sistema de amortização</label>
+    <div class="toggle-group" style="margin-bottom:18px">
+      <button type="button" data-sistema="SAC" class="active">SAC</button>
+      <button type="button" data-sistema="PRICE">Price</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Arsenal do cliente</h3>
+
+    <div class="field">
+      <label for="salarioBruto">Salário bruto mensal (R$)</label>
+      <input id="salarioBruto" type="number" inputmode="decimal" placeholder="0,00" />
+    </div>
+    <div class="toggle-group" style="margin-bottom:18px">
+      <button type="button" id="toggle-fgts" class="active">Usar FGTS (8% a.m., saque a cada 24 meses)</button>
+    </div>
+
+    <div class="field">
+      <label for="valor13">13º salário líquido estimado (R$)</label>
+      <input id="valor13" type="number" inputmode="decimal" placeholder="0,00" />
+    </div>
+    <div class="toggle-group" style="margin-bottom:18px">
+      <button type="button" id="toggle-13" class="active">Usar 13º todo ano como amortização</button>
+    </div>
+
+    <label>Aportes avulsos</label>
+    <div class="list-rows" id="lista-aportes"></div>
+    <button class="btn btn-secondary" id="btn-add-aporte" type="button">+ Adicionar aporte avulso</button>
+    <p class="hint">Todo aporte extraordinário abate o saldo devedor e reduz o PRAZO final, mantendo a parcela.</p>
+  </div>
+
+  <div class="section">
+    <div class="summary-line">
+      <span>Prazo original</span>
+      <span id="previaPrazoOriginal">—</span>
+    </div>
+    <div class="summary-line">
+      <span class="total">Prazo estimado com a estratégia</span>
+      <span class="total" id="previaPrazoEstrategico">—</span>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-continuar">Ver o Choque de Realidade →</button>
+</main>
+
+<nav class="stepper">
+  <a href="#" id="link-fechamento">1. Fechamento</a>
+  <a href="#" class="current">2. Estratégia</a>
+  <a href="#" id="link-resultados">3. Resultado</a>
+</nav>
+
+<script type="module" src="js/screens/estrategia.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Acelerador de Quitação — O Choque de Realidade</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="assets/icons/icon-192.png" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<main>
+  <h1 id="nome-cliente">Cliente</h1>
+  <h2>Tela 3 — O Choque de Realidade</h2>
+
+  <div class="section">
+    <h3>Resumo da obra — o que você paga até pegar as chaves</h3>
+    <div class="summary-line">
+      <span>Sinal à vista</span>
+      <span id="linhaSinal">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span>Parcelas à construtora (corrigidas pelo INCC)</span>
+      <span id="linhaParcelas">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span>Juros de obra estimados</span>
+      <span id="linhaJurosObra">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span class="total">Total até a entrega das chaves</span>
+      <span class="total" id="linhaTotalObra">R$ 0</span>
+    </div>
+  </div>
+
+  <div class="result-card highlight-good">
+    <div class="label">Economia total de juros com a estratégia</div>
+    <div class="value" id="cardEconomia">R$ 0</div>
+  </div>
+
+  <div class="result-card highlight-good">
+    <div class="label">Tempo poupado no financiamento</div>
+    <div class="value" id="cardTempo">0</div>
+  </div>
+
+  <div class="chart-box">
+    <h3>Queda do saldo devedor</h3>
+    <canvas id="graficoSaldo" height="220"></canvas>
+    <div class="chart-legend">
+      <span class="cru">Cenário cru</span>
+      <span class="estrategico">Cenário estratégico</span>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <h3>Juros acumulados</h3>
+    <canvas id="graficoJuros" height="220"></canvas>
+    <div class="chart-legend">
+      <span class="cru">Cenário cru</span>
+      <span class="estrategico">Cenário estratégico</span>
+    </div>
+  </div>
+
+  <button class="btn btn-secondary" id="btn-editar" style="width:100%">← Ajustar a estratégia</button>
+</main>
+
+<nav class="stepper">
+  <a href="#" id="link-fechamento">1. Fechamento</a>
+  <a href="#" id="link-estrategia">2. Estratégia</a>
+  <a href="#" class="current">3. Resultado</a>
+</nav>
+
+<script src="assets/vendor/chart.min.js"></script>
+<script type="module" src="js/screens/resultados.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+}
+</script>
+</body>
+</html>

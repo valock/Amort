@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+
+# Dependências / segredos
+node_modules/
+.env
+.env.*
+
+# Netlify
+.netlify/

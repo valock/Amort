@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Acelerador de Quitação — O Fechamento</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="assets/icons/icon-192.png" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<main>
+
+  <!-- Lista de clientes (visível quando não há cliente selecionado na URL) -->
+  <section id="tela-lista">
+    <h1>Acelerador de Quitação</h1>
+    <h2>Escolha um cliente ou comece um novo caso</h2>
+
+    <div class="client-list" id="lista-clientes"></div>
+
+    <div class="section">
+      <div class="field">
+        <label for="input-novo-nome">Nome do cliente</label>
+        <input id="input-novo-nome" type="text" placeholder="Ex: Maria Souza" />
+      </div>
+      <button class="btn btn-primary" id="btn-novo-cliente">+ Novo cliente</button>
+    </div>
+  </section>
+
+  <!-- Tela 1: O Fechamento (visível quando ?cliente=... está na URL) -->
+  <section id="tela-fechamento" style="display:none">
+    <h1 id="nome-cliente">Cliente</h1>
+    <h2>Tela 1 — O Fechamento (pré-chaves)</h2>
+
+    <div class="section">
+      <h3>Imóvel e obra</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="valorImovel">Valor total do imóvel (R$)</label>
+          <input id="valorImovel" type="number" inputmode="decimal" placeholder="0,00" />
+        </div>
+        <div class="field">
+          <label for="prazoObraMeses">Prazo de obra (meses)</label>
+          <input id="prazoObraMeses" type="number" inputmode="numeric" placeholder="24" />
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Sinal e entrada parcelada</h3>
+      <div class="field">
+        <label for="sinal">Sinal à vista (R$)</label>
+        <input id="sinal" type="number" inputmode="decimal" placeholder="0,00" />
+      </div>
+
+      <label>Parcelas / balões à construtora</label>
+      <div class="list-rows" id="lista-parcelas"></div>
+      <button class="btn btn-secondary" id="btn-add-parcela" type="button">+ Adicionar parcela</button>
+
+      <div class="warning-badge">
+        <span class="icon">⚠️</span>
+        <span>Essas parcelas sofrem correção pelo <strong>INCC</strong> — os valores abaixo já mostram a projeção corrigida (estimativa, não é o índice oficial mês a mês).</span>
+      </div>
+
+      <div class="field">
+        <label for="inccMensal">INCC mensal estimado (%)</label>
+        <input id="inccMensal" type="number" inputmode="decimal" step="0.01" placeholder="0,50" />
+      </div>
+
+      <div class="summary-line">
+        <span>Total nominal das parcelas</span>
+        <span id="totalNominalParcelas">R$ 0</span>
+      </div>
+      <div class="summary-line">
+        <span class="total">Total corrigido pelo INCC (projeção)</span>
+        <span class="total" id="totalCorrigidoParcelas">R$ 0</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Evolução de obra (financiamento com o banco)</h3>
+      <div class="field-row">
+        <div class="field">
+          <label for="valorFinanciadoObra">Valor financiado com o banco (R$)</label>
+          <input id="valorFinanciadoObra" type="number" inputmode="decimal" placeholder="0,00" />
+        </div>
+        <div class="field">
+          <label for="taxaMensalObra">Taxa de juros de obra (% a.m.)</label>
+          <input id="taxaMensalObra" type="number" inputmode="decimal" step="0.01" placeholder="1,00" />
+        </div>
+      </div>
+      <p class="hint">Curva de liberação assumida como linear ao longo dos meses de obra (estimativa).</p>
+      <div class="summary-line">
+        <span class="total">Juros de obra estimados até a entrega</span>
+        <span class="total" id="totalJurosObra">R$ 0</span>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-continuar">Continuar para A Estratégia →</button>
+  </section>
+
+</main>
+
+<nav class="stepper" id="stepper" style="display:none">
+  <a href="#" class="current">1. Fechamento</a>
+  <a href="#" id="link-estrategia">2. Estratégia</a>
+  <a href="#" id="link-resultados">3. Resultado</a>
+</nav>
+
+<script type="module" src="js/screens/fechamento.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+}
+</script>
+</body>
+</html>
