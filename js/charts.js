@@ -325,3 +325,44 @@ export function criarGraficoBarras(canvasId, { rotulos, valores, cores, formatad
     },
   });
 }
+
+/**
+ * Barras empilhadas por ano: juros embaixo, abatimento de dívida em cima.
+ * Mostra a virada do financiamento sem o cliente precisar ler tabela.
+ */
+export function criarGraficoAnosEmpilhado(canvasId, { rotulos, juros, amortizacao, formatador }) {
+  return new Chart(document.getElementById(canvasId), {
+    type: "bar",
+    data: {
+      labels: rotulos,
+      datasets: [
+        { label: "Juros", data: juros, backgroundColor: VERMELHO, borderColor: SUPERFICIE, borderWidth: 1 },
+        {
+          label: "Abateu a dívida",
+          data: amortizacao,
+          backgroundColor: VERDE,
+          borderColor: SUPERFICIE,
+          borderWidth: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: (item) => `${item.dataset.label}: ${formatador(item.parsed.y)}` },
+        },
+      },
+      scales: {
+        x: { stacked: true, ticks: { color: CINZA, maxTicksLimit: 8 }, grid: { display: false } },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { color: CINZA, callback: formatador, maxTicksLimit: 5 },
+          grid: { color: GRADE },
+        },
+      },
+    },
+  });
+}

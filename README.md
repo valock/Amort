@@ -10,6 +10,10 @@ estratégica economiza depois das chaves.
 
 Cada cliente é um caso salvo só no dispositivo — nada é enviado a servidores.
 
+O corretor abre o app num **hub** com todos os clientes cadastrados: quem está
+em dia, quem pede atenção, o total acompanhado, e um botão para entregar o
+controle a cada cliente.
+
 ## Fluxo (5 passos)
 
 1. **O que a Caixa aprovou** — campos com os mesmos nomes do documento oficial
@@ -27,6 +31,12 @@ Cada cliente é um caso salvo só no dispositivo — nada é enviado a servidore
    - *Resumo*: onde ele está, quanto da dívida já quitou, quando quita, e dois
      gráficos — a dívida caindo no ritmo dele contra o ritmo mínimo (com o mês
      atual marcado), e para onde vai cada prestação (juros vs amortização).
+   - *Painel* também mostra o **patrimônio**: o valor de mercado informado menos
+     a dívida, com quanto do imóvel já é do cliente. Cada real amortizado vira
+     patrimônio na hora — é o argumento que fecha a conversa.
+   - *Evolução* traz o **extrato ano a ano** no formato do extrato de imposto de
+     renda da Caixa: quanto abateu a dívida e quanto foi juros em cada ano, e em
+     que ano a amortização finalmente supera os juros.
    - *Simular*: o cliente digita um valor e vê, lado a lado, o que acontece
      reduzindo o **prazo** e reduzindo a **prestação** — com a repartição entre
      juros corridos e abatimento real, como na tela "Reduzir saldo ou quitar" do

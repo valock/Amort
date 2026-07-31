@@ -61,6 +61,24 @@
       <!-- KPI row -->
       <div class="kpi-row" id="kpiRow"></div>
 
+      <!-- Patrimônio: só aparece quando há valor de mercado informado -->
+      <div id="blocoPatrimonio" style="display:none">
+        <div class="patrimonio-card">
+          <div class="patrimonio-label">Seu patrimônio hoje</div>
+          <div class="patrimonio-valor" id="patrimonioLiquido">—</div>
+          <p class="hint" id="patrimonioDetalhe"></p>
+        </div>
+
+        <div class="chart-box">
+          <h3>Quanto do imóvel já é seu</h3>
+          <div class="rosca-wrap">
+            <canvas id="roscaPatrimonio"></canvas>
+          </div>
+          <ul class="legenda-rosca" id="legendaPatrimonio"></ul>
+          <p class="hint" id="hintPatrimonio"></p>
+        </div>
+      </div>
+
       <!-- Medidor: uma razão contra um limite não é gráfico de pizza -->
       <div class="section">
         <h3>Quanto da dívida você já quitou</h3>
@@ -221,6 +239,41 @@
           <span class="estrategico">Amortização (abate a dívida)</span>
         </div>
         <p class="hint" id="hintGraficoComposicao"></p>
+      </div>
+
+      <div class="chart-box">
+        <h3>Ano a ano: quanto abateu a dívida e quanto foi juros</h3>
+        <canvas id="graficoAnos" height="230"></canvas>
+        <div class="chart-legend">
+          <span class="cru">Juros</span>
+          <span class="estrategico">Abateu a dívida</span>
+        </div>
+        <p class="hint" id="hintAnos"></p>
+      </div>
+
+      <div class="section">
+        <h3>Extrato ano a ano</h3>
+        <p class="hint" style="margin-bottom:12px">
+          Mesmo formato do extrato de imposto de renda que a Caixa emite. Aqui é
+          <strong>projeção</strong> com a prestação constante — o extrato oficial traz o que
+          foi efetivamente pago, com correção e eventuais diferenças.
+        </p>
+        <div class="tabela-wrap" style="max-height:52vh">
+          <table class="planilha anos" id="tabelaAnos">
+            <thead>
+              <tr>
+                <th>Ano</th>
+                <th>Abateu a dívida</th>
+                <th>Juros</th>
+                <th>Seguros</th>
+                <th>Aportes</th>
+                <th>Juros/Abate</th>
+                <th>Saldo no fim</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section">

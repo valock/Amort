@@ -12,14 +12,20 @@
 <body>
 <main>
 
-  <!-- Lista de clientes (quando não há ?cliente= na URL) -->
+  <!-- Hub do corretor (quando não há ?cliente= na URL) -->
   <section id="tela-lista">
     <h1>Acelerador de Quitação</h1>
-    <h2>Escolha um cliente ou comece um novo caso</h2>
+    <h2>Seus clientes</h2>
+
+    <div class="kpi-row" id="totaisCarteira"></div>
+
+    <div class="field" id="campo-busca" style="display:none">
+      <input id="busca-cliente" type="search" placeholder="Buscar por nome" />
+    </div>
 
     <div class="client-list" id="lista-clientes"></div>
 
-    <div class="section">
+    <div class="section" id="secao-novo">
       <div class="field">
         <label for="input-novo-nome">Nome do cliente</label>
         <input id="input-novo-nome" type="text" placeholder="Nome do cliente" />
@@ -27,6 +33,7 @@
       <button class="btn btn-primary" id="btn-novo-cliente">+ Novo cliente</button>
       <p class="hint">Cada caso fica salvo só neste aparelho. Nada é enviado para servidor.</p>
     </div>
+
   </section>
 
   <!-- Tela 1: Aprovação da Caixa -->

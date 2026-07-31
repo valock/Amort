@@ -14,6 +14,8 @@ import {
 import { calcularJurosObra, totalJurosObra } from "../calc/evolucaoObra.js";
 import { parametrosCorrecao, taxaPosChaves } from "../calc/correcao.js";
 import { rotuloMes, mesAtualISO } from "../calc/calendario.js";
+import { patrimonio } from "../calc/patrimonio.js";
+import { ligarTexto } from "../ui.js";
 
 async function iniciar() {
   const cliente = await carregarClienteAtualOuVoltar();
@@ -52,6 +54,15 @@ async function iniciar() {
   ligarCampo("inccMensal", e, "inccMensal", { escala: 100, aoMudar: recalcular });
   ligarCampo("jurosPosChaves", e, "jurosPosChavesMensal", { escala: 100, aoMudar: recalcular });
   ligarCampo("inflacaoPosChaves", e, "inflacaoPosChavesMensal", { escala: 100, aoMudar: recalcular });
+  const merc = cliente.mercado;
+  ligarCampo("valorMercado", merc, "valorAtual", { aoMudar: recalcular });
+  ligarTexto("mercadoFonte", merc, "fonte");
+  const inputMercadoData = document.getElementById("mercadoData");
+  inputMercadoData.value = merc.dataISO || "";
+  inputMercadoData.addEventListener("change", () => {
+    merc.dataISO = inputMercadoData.value;
+  });
+
   ligarCampo("prazoObraMeses", e, "prazoObraMeses", { aoMudar: recalcular });
   ligarCampo("taxaMensalObra", e, "taxaMensalObra", { escala: 100, aoMudar: recalcular });
 
@@ -147,6 +158,20 @@ async function iniciar() {
       "saidaTaxaPosChaves",
       fmtPct(taxaPosChaves({ jurosMensal: e.jurosPosChavesMensal, inflacaoMensal: e.inflacaoPosChavesMensal }), 3) +
         " ao mês"
+    );
+
+    // Valorização é só a diferença entre o valor informado e o de compra;
+    // o app não projeta valorização futura.
+    const p = patrimonio({
+      valorMercado: merc.valorAtual,
+      saldoDevedor: 0,
+      valorCompra: a.valorImovel,
+    });
+    setTexto(
+      "saidaValorizacao",
+      p.temMercado && a.valorImovel
+        ? `${fmtMoeda(p.valorizacao)} (${fmtPct(p.proporcaoValorizacao, 1)})`
+        : "—"
     );
 
     renderAvisos(

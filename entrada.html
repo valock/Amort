@@ -114,6 +114,33 @@
   </div>
 
   <div class="section">
+    <h3>Quanto o imóvel vale hoje (opcional)</h3>
+    <p class="hint" style="margin-bottom:14px">
+      Com esse valor o cliente enxerga o patrimônio dele, não só a dívida. Use uma
+      avaliação do banco, o preço de uma unidade igual anunciada, ou a sua leitura de
+      mercado — e registre a origem, porque é estimativa, não laudo.
+    </p>
+    <div class="field">
+      <label for="valorMercado">Valor de mercado estimado (R$)</label>
+      <input id="valorMercado" type="text" inputmode="decimal" placeholder="0,00" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="mercadoData">Mês da avaliação</label>
+        <input id="mercadoData" type="month" />
+      </div>
+      <div class="field">
+        <label for="mercadoFonte">Origem do valor</label>
+        <input id="mercadoFonte" type="text" placeholder="Ex: avaliação da Caixa" />
+      </div>
+    </div>
+    <div class="summary-line">
+      <span>Valorização sobre o preço de compra</span>
+      <span id="saidaValorizacao">—</span>
+    </div>
+  </div>
+
+  <div class="section">
     <h3>Evolução de obra (opcional)</h3>
     <p class="hint" style="margin-bottom:14px">
       Só preencha se o imóvel ainda estiver em construção e o banco cobrar juros de obra durante as liberações.

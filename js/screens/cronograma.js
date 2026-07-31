@@ -21,12 +21,15 @@ import {
   criarGraficoComposicao,
   criarGraficoRosca,
   criarGraficoBarras,
+  criarGraficoAnosEmpilhado,
   padSerie,
   SERIES,
 } from "../charts.js";
 import { simularAporte, sugestoesDeAporte, prazoParaQuitar } from "../calc/simulador.js";
 import { segurosETarifasMensais, taxaMensalCaixa, primeiraParcelaBase } from "../calc/caixa.js";
 import { saudeDoContrato } from "../calc/saude.js";
+import { patrimonio, composicaoPatrimonio } from "../calc/patrimonio.js";
+import { extratoAnual, anoDaVirada } from "../calc/extratoAnual.js";
 import { composicaoDoImovel, composicaoDoDesembolso } from "../calc/composicao.js";
 import { planilhaParaCSV, baixarCSV, nomeArquivoPlanilha } from "../csv.js";
 
@@ -188,6 +191,7 @@ function renderResumo() {
   renderBarraQuitado(resumo);
   renderHero(resumo);
   renderKpis(resumo);
+  renderPatrimonio(resumo);
 
   setTexto("linhaEconomiaJuros", fmtMoeda(resumo.economiaJurosAtual));
 }
@@ -325,6 +329,8 @@ function renderRoscas() {
     renderLegendaRosca("legendaImovel", imovel.fatias, imovel.total);
   }
 
+  renderRoscaPatrimonio();
+
   const desembolso = composicaoDoDesembolso(cliente);
   if (desembolso.total > 0) {
     graficosRosca.push(
@@ -429,6 +435,8 @@ function renderGraficosEvolucao() {
       : "Registre aportes para ver a linha verde se descolar da vermelha.";
 
   // A composição só faz sentido no trecho em que há parcela para decompor
+  renderGraficoAnos();
+
   graficosLinha.push(
     criarGraficoComposicao("graficoComposicao", {
       labels: labels.slice(0, s.prazoAtual),
@@ -863,4 +871,137 @@ async function registrarAporteSimulado() {
 
   renderTudo();
   abrirSimulador();
+}
+
+// ---------------------------------------------------------------- Patrimônio
+
+// Situação de patrimônio hoje: valor de mercado informado menos a dívida.
+function patrimonioHoje(resumo) {
+  const merc = cliente.mercado || {};
+  return patrimonio({
+    valorMercado: merc.valorAtual,
+    saldoDevedor: resumo.saldoDevedorAtual ?? cliente.aprovacao.valorFinanciamento,
+    valorCompra: cliente.aprovacao.valorImovel,
+  });
+}
+
+function renderPatrimonio(resumo) {
+  const bloco = document.getElementById("blocoPatrimonio");
+  const merc = cliente.mercado || {};
+  const p = patrimonioHoje(resumo);
+
+  if (!p.temMercado) {
+    bloco.style.display = "none";
+    return;
+  }
+  bloco.style.display = "block";
+
+  setTexto("patrimonioLiquido", fmtMoeda(p.liquido));
+
+  const partes = [
+    `Imóvel avaliado em ${fmtMoedaCurta(p.valorMercado)} menos ${fmtMoedaCurta(
+      p.saldoDevedor
+    )} de dívida.`,
+  ];
+  if (p.valorizacao > 0) {
+    partes.push(
+      `Valorizou ${fmtMoedaCurta(p.valorizacao)} (${fmtPct(p.proporcaoValorizacao, 0)}) sobre o preço de compra.`
+    );
+  }
+  if (merc.dataISO) partes.push(`Avaliação de ${merc.dataISO.split("-").reverse().join("/")}.`);
+  if (merc.fonte) partes.push(`Fonte: ${merc.fonte}.`);
+  partes.push("Valor de mercado é estimativa, não laudo.");
+  setTexto("patrimonioDetalhe", partes.join(" "));
+}
+
+function renderRoscaPatrimonio() {
+  const resumo = resumoControle(cliente);
+  const p = patrimonioHoje(resumo);
+  const comp = composicaoPatrimonio(p);
+  if (!comp.fatias.length) return;
+
+  graficosRosca.push(
+    criarGraficoRosca("roscaPatrimonio", {
+      fatias: comp.fatias,
+      formatador: fmtMoeda,
+      tituloCentro: "já é seu",
+      valorCentro: fmtPct(p.proporcaoQuitada, 0),
+    })
+  );
+  renderLegendaRosca("legendaPatrimonio", comp.fatias, comp.total);
+
+  document.getElementById("hintPatrimonio").textContent =
+    `Cada real que você adianta sai da fatia do banco e entra na sua, na hora. ` +
+    `É por isso que amortizar aumenta o seu patrimônio imediatamente.`;
+}
+
+// ---------------------------------------------------------------- Ano a ano
+
+function renderGraficoAnos() {
+  const { anos } = extratoAnual(cliente);
+  if (!anos.length) return;
+
+  // Com 35 anos de contrato o gráfico fica ilegível; mostra os 15 primeiros,
+  // que é onde a proporção juros/amortização realmente muda.
+  const recorte = anos.slice(0, 15);
+
+  graficosLinha.push(
+    criarGraficoAnosEmpilhado("graficoAnos", {
+      rotulos: recorte.map((a) => String(a.ano)),
+      juros: recorte.map((a) => a.juros),
+      amortizacao: recorte.map((a) => a.amortizacao + a.aportes),
+      formatador: (v) => fmtMoedaCurta(v),
+    })
+  );
+
+  const virada = anoDaVirada(anos);
+  const primeiro = anos[0];
+  const partes = [];
+  if (primeiro && primeiro.amortizacao > 0) {
+    partes.push(
+      `No primeiro ano, cada R$ 1 que abateu a dívida veio acompanhado de ` +
+        `R$ ${primeiro.razaoJurosAmortizacao.toFixed(2).replace(".", ",")} de juros.`
+    );
+  }
+  if (virada) partes.push(`A partir de ${virada} você passa a abater mais dívida do que pagar juros.`);
+  if (recorte.length < anos.length) partes.push(`Mostrando os primeiros ${recorte.length} anos de ${anos.length}.`);
+  document.getElementById("hintAnos").textContent = partes.join(" ");
+
+  renderTabelaAnos(anos);
+}
+
+function renderTabelaAnos(anos) {
+  const tabela = document.getElementById("tabelaAnos");
+  const corpo = tabela.querySelector("tbody");
+  corpo.innerHTML = "";
+
+  const frag = document.createDocumentFragment();
+  for (const a of anos) {
+    const tr = document.createElement("tr");
+    if (a.temMesAtual) tr.className = "ano-atual";
+
+    const razao = Number.isFinite(a.razaoJurosAmortizacao)
+      ? a.razaoJurosAmortizacao.toFixed(2).replace(".", ",") + "x"
+      : "—";
+
+    for (const c of [
+      { t: String(a.ano) },
+      { t: fmtMoeda(a.amortizacao + a.aportes) },
+      { t: fmtMoeda(a.juros) },
+      { t: fmtMoeda(a.seguros) },
+      { t: a.aportes > 0 ? fmtMoeda(a.aportes) : "—", cls: a.aportes > 0 ? "aporte-feito" : "" },
+      { t: razao, cls: "razao" },
+      { t: fmtMoeda(a.saldoFinal), cls: "saldo" },
+    ]) {
+      const td = document.createElement("td");
+      td.textContent = c.t;
+      if (c.cls) td.className = c.cls;
+      tr.appendChild(td);
+    }
+    frag.appendChild(tr);
+  }
+  corpo.appendChild(frag);
+
+  const atual = corpo.querySelector("tr.ano-atual");
+  if (atual) atual.scrollIntoView({ block: "center" });
 }

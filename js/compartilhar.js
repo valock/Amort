@@ -64,3 +64,43 @@ export function textoWhatsApp(cliente, link) {
     `Os dados ficam salvos só no seu aparelho.`
   );
 }
+
+/**
+ * Entrega o link ao cliente pelo caminho mais curto que o aparelho oferecer.
+ *
+ * A folha de compartilhamento nativa é a melhor opção no celular: uma tocada e
+ * o corretor escolhe WhatsApp, SMS, e-mail ou o que tiver instalado, sem sair
+ * do app. Onde ela não existe (navegador de desktop, contexto sem permissão),
+ * cai para o WhatsApp Web e, em último caso, copia o link.
+ *
+ * Devolve por onde foi: "nativo" | "whatsapp" | "copiado" | "cancelado".
+ */
+export async function compartilharCaso(cliente, link) {
+  const texto = textoWhatsApp(cliente, link);
+
+  if (navigator.share) {
+    try {
+      // O link vai dentro do texto: alguns aplicativos descartam o campo `url`
+      // e o cliente receberia a mensagem sem o link, que é justamente o item.
+      await navigator.share({ title: "Controle do seu imóvel", text: texto });
+      return "nativo";
+    } catch (erro) {
+      // AbortError = o usuário fechou a folha; qualquer outra coisa cai adiante
+      if (erro && erro.name === "AbortError") return "cancelado";
+    }
+  }
+
+  try {
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, "_blank");
+    return "whatsapp";
+  } catch {
+    // Sem janela nova disponível, ainda dá para o corretor colar onde quiser
+  }
+
+  try {
+    await navigator.clipboard.writeText(link);
+    return "copiado";
+  } catch {
+    return "cancelado";
+  }
+}

@@ -83,6 +83,10 @@ valor do imóvel = financiamento (Caixa) + subsídio + entrada (construtora)
   amortiza. Ver o invariante 13.
 - **FGHAB**: fundo garantidor do MCMV, cobrado dentro da prestação junto com os
   seguros.
+- **Valor de mercado**: quanto o imóvel vale hoje. É a outra metade do
+  patrimônio — a dívida cai pela amortização e o valor do bem se move por conta
+  própria. **Sempre informado por quem usa o app** (avaliação do banco, anúncio
+  de unidade igual, leitura do corretor), com data e fonte registradas.
 - **FGTS**: fundo obrigatório onde o empregador deposita ~8% do salário bruto
   por mês. Serve para duas coisas neste app: compor a **entrada** e, depois das
   chaves, **amortizar** o financiamento. O saque para amortização respeita um
@@ -200,6 +204,15 @@ teste.
    projetados (FGTS, 13º), então o prazo dela é o do plano e não o do contrato.
    Misturar os dois já produziu "economia negativa" na tela.
 
+15. **O app nunca projeta valorização do imóvel.** O valor de mercado é um
+   número informado, datado e com fonte; a interface o trata como estimativa e
+   não como laudo. Projetar valorização seria vender expectativa, e é a linha
+   entre uma ferramenta de análise e uma promessa de retorno.
+
+16. **O hub tolera caso incompleto.** Um cliente sem datas ou com bloco faltando
+   aparece na lista dizendo o que falta, em vez de receber status falso ou
+   derrubar a tela inteira. Ver o `try/catch` em `resumirParaHub`.
+
 ---
 
 ## Arquitetura
@@ -222,6 +235,9 @@ js/calc/           Matemática pura. Sem DOM, sem estado global.
   fgts.js            Acúmulo e saque bienal do FGTS, 13º salário
   cenarios.js        Fonte única dos aportes projetados + cenários comparados
   saude.js           Indicadores de saúde do contrato (status + ícone + texto)
+  patrimonio.js      Valor de mercado menos dívida = o que é do cliente
+  extratoAnual.js    Agrupamento por ano, no formato do extrato de IR da Caixa
+  carteira.js        Resumo de todos os casos para o hub do corretor
   composicao.js      Composições parte-do-todo das roscas
   correcao.js        Correção das parcelas da construtora em duas fases
   simulador.js       Simulação de aporte nos modos prazo e prestação
@@ -289,6 +305,7 @@ node testes/motor-amortizacao.mjs      # SAC/Price, FGTS, 13º, INCC, juros de o
 node testes/cronograma.mjs             # datas, as duas fases, planilha, gráficos e CSV
 node testes/saude-e-composicao.mjs     # indicadores de saúde e composições das roscas
 node testes/simulador-caixa-real.mjs   # simulador travado contra o app da Caixa
+node testes/patrimonio-e-carteira.mjs  # patrimônio, extrato anual e hub do corretor
 node testes/verificar-anonimizacao.mjs # varre o repo por dado pessoal
 ```
 

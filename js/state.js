@@ -1,6 +1,6 @@
 import { novoId, carregarCliente, salvarCliente } from "./storage.js";
 
-export const VERSAO_MODELO = 5;
+export const VERSAO_MODELO = 6;
 
 // Modelo espelhando o fluxo real de venda:
 //   aprovacao  -> a simulação que o correspondente manda (Caixa)
@@ -50,6 +50,14 @@ export function clienteVazio(nome) {
       usar13: true,
       aportesAvulsos: [],
     },
+    // Quanto o imóvel vale HOJE. É o outro lado do patrimônio: a dívida cai
+    // pela amortização, e o valor do bem se move por conta própria. Sempre
+    // informado por quem usa o app — não há projeção de valorização aqui.
+    mercado: {
+      valorAtual: 0,
+      dataISO: "",
+      fonte: "",
+    },
     // Controle mês a mês do cliente. `meses` é esparso: só guarda os meses em
     // que ele registrou algo, para o caso salvo não crescer com 420 entradas.
     acompanhamento: {
@@ -65,6 +73,15 @@ export function clienteVazio(nome) {
 // inteira sem que cada passo precise conhecer os seguintes.
 export function migrarCliente(cliente) {
   if (!cliente || cliente.versaoModelo === VERSAO_MODELO) return cliente;
+
+  // v5 -> v6: ganha o bloco de valor de mercado
+  if (cliente.versaoModelo === 5) {
+    return migrarCliente({
+      ...cliente,
+      versaoModelo: 6,
+      mercado: cliente.mercado || { valorAtual: 0, dataISO: "", fonte: "" },
+    });
+  }
 
   // v4 -> v5: a correção da entrada ganha a fase pós-chaves
   if (cliente.versaoModelo === 4) {
@@ -149,6 +166,18 @@ export function normalizarCliente(cliente) {
     cliente.acompanhamento = { dataBaseISO: "", mesEntregaChaves: 0, meses: {} };
   }
   if (!cliente.acompanhamento.meses) cliente.acompanhamento.meses = {};
+  if (!cliente.mercado) cliente.mercado = { valorAtual: 0, dataISO: "", fonte: "" };
+
+  // Blindagem para campos que uma versão passou a exigir: se faltarem, um
+  // `|| 0` mais adiante viraria "sem correção" em silêncio, e o cliente veria
+  // parcela menor do que a real.
+  if (!cliente.entrada) cliente.entrada = {};
+  const e = cliente.entrada;
+  if (e.jurosPosChavesMensal == null) e.jurosPosChavesMensal = 0.01;
+  if (e.inflacaoPosChavesMensal == null) e.inflacaoPosChavesMensal = 0.004;
+  if (!e.serieMensal) e.serieMensal = { quantidade: 0, valor: 0, mesInicial: 1 };
+  if (!e.baloes) e.baloes = [];
+
   return cliente;
 }
 

@@ -1,7 +1,7 @@
 // Service worker cache-first: depois do primeiro load, o app inteiro funciona
 // sem internet — essencial pra mesa de negociação sem sinal.
 
-const CACHE_NAME = "acelerador-quitacao-v6";
+const CACHE_NAME = "acelerador-quitacao-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -35,6 +35,9 @@ const APP_SHELL = [
   "./js/calc/composicao.js",
   "./js/calc/correcao.js",
   "./js/calc/simulador.js",
+  "./js/calc/patrimonio.js",
+  "./js/calc/extratoAnual.js",
+  "./js/calc/carteira.js",
   "./js/screens/aprovacao.js",
   "./js/screens/entrada.js",
   "./js/screens/estrategia.js",
