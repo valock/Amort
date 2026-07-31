@@ -4,10 +4,10 @@
 // a partir do financiamento original. Cada aporte extra apenas reduz o saldo
 // devedor a mais naquele mês — o número de meses necessários para zerar o
 // saldo cai naturalmente, sem precisar recalcular a parcela.
-
-export function taxaMensalEquivalente(taxaAnual) {
-  return Math.pow(1 + taxaAnual, 1 / 12) - 1;
-}
+//
+// A taxa entra aqui já MENSAL. Quem chama decide a convenção; para a Caixa,
+// use taxaMensalCaixa() de calc/caixa.js — ela usa nominal/12, o que é o que
+// reproduz os "Juros Efetivos" impressos na simulação oficial.
 
 export function pmtPrice(pv, i, n) {
   if (i === 0) return pv / n;
@@ -26,13 +26,15 @@ export function aportesPorMes(aportes) {
  * @param {object} params
  * @param {number} params.valorFinanciado
  * @param {number} params.prazoMeses
- * @param {number} params.taxaAnual
+ * @param {number} params.taxaMensal taxa efetiva mensal (ex: 0.00375)
  * @param {'SAC'|'PRICE'} params.sistema
  * @param {Map<number, number>} [params.aportesExtras] mês -> valor do aporte
  */
-export function simular({ valorFinanciado, prazoMeses, taxaAnual, sistema, aportesExtras }) {
-  const i = taxaMensalEquivalente(taxaAnual);
+export function simular({ valorFinanciado, prazoMeses, taxaMensal, sistema, aportesExtras }) {
+  const i = taxaMensal;
   const aportes = aportesExtras || new Map();
+
+  if (!valorFinanciado || !prazoMeses || valorFinanciado <= 0 || prazoMeses <= 0) return [];
 
   const pmtFixa = sistema === "PRICE" ? pmtPrice(valorFinanciado, i, prazoMeses) : null;
   const amortFixaSAC = sistema === "SAC" ? valorFinanciado / prazoMeses : null;

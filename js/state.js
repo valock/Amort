@@ -1,23 +1,41 @@
 import { novoId, carregarCliente, salvarCliente } from "./storage.js";
 
+// Modelo espelhando o fluxo real de venda:
+//   aprovacao  -> a simulação que o correspondente manda (Caixa)
+//   entrada    -> o que fica com a construtora (sinal, FGTS, parcelas, balões)
+//   estrategia -> a aceleração da quitação depois das chaves
 export function clienteVazio(nome) {
   return {
     id: novoId(),
     nome: nome || "Novo cliente",
     criadoEm: new Date().toISOString(),
-    fechamento: {
+    versaoModelo: 3,
+    aprovacao: {
       valorImovel: 0,
-      prazoObraMeses: 24,
+      valorAvaliacao: 0,
+      valorFinanciamento: 0,
+      valorSubsidio: 0,
+      prazoMeses: 420,
+      sistema: "PRICE",
+      jurosNominalAnual: 0.045,
+      trAnual: 0,
+      primeiraPrestacaoDoc: 0,
+      rendaBruta: 0,
+      comprometimentoMax: 0.3,
+      cidade: "",
+      dataSimulacao: "",
+    },
+    entrada: {
       sinal: 0,
-      parcelasEntrada: [],
+      fgtsNaEntrada: 0,
+      // Parcelamento no formato do contrato: uma série mensal uniforme + balões
+      serieMensal: { quantidade: 0, valor: 0, mesInicial: 1 },
+      baloes: [],
       inccMensal: 0.005,
-      valorFinanciadoObra: 0,
-      taxaMensalObra: 0.01,
+      prazoObraMeses: 0,
+      taxaMensalObra: 0,
     },
     estrategia: {
-      prazoMeses: 420,
-      taxaAnual: 0.1,
-      sistema: "SAC",
       salarioBruto: 0,
       usarFGTS: true,
       intervaloSaqueFGTSMeses: 24,
@@ -26,6 +44,65 @@ export function clienteVazio(nome) {
       aportesAvulsos: [],
     },
   };
+}
+
+// Casos salvos na primeira versão do app (fechamento/estrategia com taxa
+// anual) continuam abrindo: o que dá para reaproveitar é migrado, o resto
+// entra com o padrão novo.
+export function migrarCliente(cliente) {
+  if (!cliente || cliente.versaoModelo === 3) return cliente;
+
+  // v2 -> v3: parcelas soltas viram série mensal + balões
+  if (cliente.versaoModelo === 2) {
+    const atualizado = { ...cliente, versaoModelo: 3 };
+    const parcelas = cliente.entrada?.parcelas || [];
+    const mensais = parcelas.filter((p) => (p.tipo || "mensal") === "mensal");
+    const baloes = parcelas.filter((p) => p.tipo === "balao");
+
+    atualizado.entrada = {
+      ...cliente.entrada,
+      serieMensal: mensais.length
+        ? {
+            quantidade: mensais.length,
+            valor: mensais[0].valor || 0,
+            mesInicial: Math.min(...mensais.map((p) => p.mes || 1)),
+          }
+        : { quantidade: 0, valor: 0, mesInicial: 1 },
+      baloes: baloes.map((b) => ({ mes: b.mes, valor: b.valor })),
+    };
+    delete atualizado.entrada.parcelas;
+    return atualizado;
+  }
+
+  const base = clienteVazio(cliente.nome);
+  base.id = cliente.id;
+  base.criadoEm = cliente.criadoEm || base.criadoEm;
+
+  const f = cliente.fechamento || {};
+  const e = cliente.estrategia || {};
+
+  base.aprovacao.valorImovel = f.valorImovel || 0;
+  base.aprovacao.valorAvaliacao = f.valorImovel || 0;
+  base.aprovacao.valorFinanciamento = f.valorFinanciadoObra || 0;
+  base.aprovacao.prazoMeses = e.prazoMeses || 420;
+  base.aprovacao.sistema = e.sistema || "PRICE";
+  // taxaAnual antiga era efetiva; aqui vira nominal, que é como a Caixa informa
+  base.aprovacao.jurosNominalAnual = e.taxaAnual || 0.045;
+
+  base.entrada.sinal = f.sinal || 0;
+  base.entrada.baloes = (f.parcelasEntrada || []).map((p) => ({ mes: p.mes, valor: p.valor }));
+  base.entrada.inccMensal = f.inccMensal != null ? f.inccMensal : 0.005;
+  base.entrada.prazoObraMeses = f.prazoObraMeses || 0;
+  base.entrada.taxaMensalObra = f.taxaMensalObra || 0;
+
+  base.estrategia.salarioBruto = e.salarioBruto || 0;
+  base.estrategia.usarFGTS = e.usarFGTS !== false;
+  base.estrategia.intervaloSaqueFGTSMeses = e.intervaloSaqueFGTSMeses || 24;
+  base.estrategia.valor13 = e.valor13 || 0;
+  base.estrategia.usar13 = e.usar13 !== false;
+  base.estrategia.aportesAvulsos = e.aportesAvulsos || [];
+
+  return base;
 }
 
 export function idClienteDaURL() {
@@ -44,11 +121,13 @@ export async function carregarClienteAtualOuVoltar() {
     window.location.href = "index.html";
     return null;
   }
-  const cliente = await carregarCliente(id);
-  if (!cliente) {
+  const bruto = await carregarCliente(id);
+  if (!bruto) {
     window.location.href = "index.html";
     return null;
   }
+  const cliente = migrarCliente(bruto);
+  if (cliente !== bruto) await salvarCliente(cliente);
   return cliente;
 }
 

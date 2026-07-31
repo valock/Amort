@@ -12,29 +12,23 @@
 <body>
 <main>
   <h1 id="nome-cliente">Cliente</h1>
-  <h2>Tela 2 — A Estratégia (pós-chaves)</h2>
+  <h2>Passo 3 — A estratégia depois das chaves</h2>
 
   <div class="section">
-    <h3>Financiamento</h3>
+    <h3>Financiamento aprovado</h3>
     <div class="summary-line">
-      <span>Valor financiado (definido na Tela 1)</span>
-      <span class="total" id="valorFinanciadoLabel">R$ 0</span>
+      <span>Valor financiado</span>
+      <span id="saidaFinanciado">R$ 0</span>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label for="prazoMeses">Prazo do financiamento (meses)</label>
-        <input id="prazoMeses" type="number" inputmode="numeric" placeholder="420" />
-      </div>
-      <div class="field">
-        <label for="taxaAnual">Taxa de juros anual (%)</label>
-        <input id="taxaAnual" type="number" inputmode="decimal" step="0.01" placeholder="10,00" />
-      </div>
+    <div class="summary-line">
+      <span>Prazo e sistema</span>
+      <span id="saidaPrazoSistema">—</span>
     </div>
-    <label>Sistema de amortização</label>
-    <div class="toggle-group" style="margin-bottom:18px">
-      <button type="button" data-sistema="SAC" class="active">SAC</button>
-      <button type="button" data-sistema="PRICE">Price</button>
+    <div class="summary-line">
+      <span>Prestação com seguros</span>
+      <span id="saidaPrestacao">—</span>
     </div>
+    <p class="hint">Esses dados vêm do Passo 1. Para mudar, volte na aprovação da Caixa.</p>
   </div>
 
   <div class="section">
@@ -42,24 +36,32 @@
 
     <div class="field">
       <label for="salarioBruto">Salário bruto mensal (R$)</label>
-      <input id="salarioBruto" type="number" inputmode="decimal" placeholder="0,00" />
+      <input id="salarioBruto" type="text" inputmode="decimal" placeholder="2.724,20" />
     </div>
     <div class="toggle-group" style="margin-bottom:18px">
-      <button type="button" id="toggle-fgts" class="active">Usar FGTS (8% a.m., saque a cada 24 meses)</button>
+      <button type="button" id="toggle-fgts">Usar FGTS acumulado (8% a.m.)</button>
     </div>
+    <div class="field">
+      <label for="intervaloSaqueFGTSMeses">Sacar o FGTS a cada quantos meses?</label>
+      <input id="intervaloSaqueFGTSMeses" type="text" inputmode="numeric" placeholder="24" />
+    </div>
+    <p class="hint" style="margin-bottom:18px">
+      O saque do FGTS para amortizar habitação respeita intervalo mínimo — o padrão de 24 meses reflete a regra bienal.
+      O acúmulo não considera rendimento do fundo, é estimativa conservadora.
+    </p>
 
     <div class="field">
       <label for="valor13">13º salário líquido estimado (R$)</label>
-      <input id="valor13" type="number" inputmode="decimal" placeholder="0,00" />
+      <input id="valor13" type="text" inputmode="decimal" placeholder="0,00" />
     </div>
     <div class="toggle-group" style="margin-bottom:18px">
-      <button type="button" id="toggle-13" class="active">Usar 13º todo ano como amortização</button>
+      <button type="button" id="toggle-13">Usar o 13º todo ano</button>
     </div>
 
     <label>Aportes avulsos</label>
     <div class="list-rows" id="lista-aportes"></div>
     <button class="btn btn-secondary" id="btn-add-aporte" type="button">+ Adicionar aporte avulso</button>
-    <p class="hint">Todo aporte extraordinário abate o saldo devedor e reduz o PRAZO final, mantendo a parcela.</p>
+    <p class="hint">Todo aporte extraordinário abate o saldo devedor e reduz o <strong>prazo</strong>, mantendo a parcela.</p>
   </div>
 
   <div class="section">
@@ -68,19 +70,19 @@
       <span id="previaPrazoOriginal">—</span>
     </div>
     <div class="summary-line">
-      <span class="total">Prazo estimado com a estratégia</span>
+      <span class="total">Prazo com a estratégia</span>
       <span class="total" id="previaPrazoEstrategico">—</span>
+    </div>
+    <div class="summary-line">
+      <span>Total de aportes previstos</span>
+      <span id="previaAportes">—</span>
     </div>
   </div>
 
-  <button class="btn btn-primary" id="btn-continuar">Ver o Choque de Realidade →</button>
+  <button class="btn btn-primary" id="btn-continuar">Ver o resultado →</button>
 </main>
 
-<nav class="stepper">
-  <a href="#" id="link-fechamento">1. Fechamento</a>
-  <a href="#" class="current">2. Estratégia</a>
-  <a href="#" id="link-resultados">3. Resultado</a>
-</nav>
+<nav class="stepper" style="display:none"></nav>
 
 <script type="module" src="js/screens/estrategia.js"></script>
 <script>

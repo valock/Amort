@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Acelerador de Quitação — A Entrada</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="assets/icons/icon-192.png" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<main>
+  <h1 id="nome-cliente">Cliente</h1>
+  <h2>Passo 2 — A entrada com a construtora</h2>
+
+  <div class="result-card">
+    <div class="label">Entrada a fechar (vem do Passo 1)</div>
+    <div class="value" id="cardEntradaNecessaria">R$ 0</div>
+  </div>
+
+  <div class="section">
+    <h3>Recursos imediatos</h3>
+    <div class="field">
+      <label for="sinal">Sinal à vista (R$)</label>
+      <input id="sinal" type="text" inputmode="decimal" placeholder="0,00" />
+    </div>
+    <div class="field">
+      <label for="fgtsNaEntrada">FGTS usado na entrada (R$)</label>
+      <input id="fgtsNaEntrada" type="text" inputmode="decimal" placeholder="0,00" />
+    </div>
+    <p class="hint">
+      No MCMV o saldo de FGTS pode compor a entrada — é o recurso que mais alivia o parcelamento com a construtora.
+    </p>
+  </div>
+
+  <div class="section">
+    <h3>Parcelamento mensal</h3>
+    <div class="field-row">
+      <div class="field">
+        <label for="serieQtd">Quantas parcelas</label>
+        <input id="serieQtd" type="text" inputmode="numeric" placeholder="24" />
+      </div>
+      <div class="field">
+        <label for="serieInicio">A partir do mês</label>
+        <input id="serieInicio" type="text" inputmode="numeric" placeholder="1" />
+      </div>
+    </div>
+    <div class="field">
+      <label for="serieValor">Valor de cada parcela (R$)</label>
+      <input id="serieValor" type="text" inputmode="decimal" placeholder="0,00" />
+    </div>
+    <button class="btn btn-secondary" id="btn-calcular-parcela" type="button" style="width:100%">
+      Calcular a parcela que fecha a entrada
+    </button>
+    <p class="hint">Preenche o valor da parcela com o que falta depois do sinal, do FGTS e dos balões.</p>
+  </div>
+
+  <div class="section">
+    <h3>Balões / intermediárias</h3>
+    <div class="list-rows" id="lista-baloes"></div>
+    <button class="btn btn-secondary" id="btn-add-balao" type="button">+ Adicionar balão</button>
+    <p class="hint">Use para reforços de anuidade, restituição de imposto ou qualquer pagamento fora da série mensal.</p>
+  </div>
+
+  <div class="section">
+    <div class="warning-badge">
+      <span class="icon">⚠️</span>
+      <span>Parcelas futuras com a construtora são corrigidas pelo <strong>INCC</strong>. A projeção abaixo usa a taxa informada — é estimativa, não o índice oficial mês a mês.</span>
+    </div>
+
+    <div class="field">
+      <label for="inccMensal">INCC mensal estimado (%)</label>
+      <input id="inccMensal" type="text" inputmode="decimal" placeholder="0,50" />
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Evolução de obra (opcional)</h3>
+    <p class="hint" style="margin-bottom:14px">
+      Só preencha se o imóvel ainda estiver em construção e o banco cobrar juros de obra durante as liberações.
+      Deixe o prazo em 0 para imóvel pronto.
+    </p>
+    <div class="field-row">
+      <div class="field">
+        <label for="prazoObraMeses">Prazo de obra (meses)</label>
+        <input id="prazoObraMeses" type="text" inputmode="numeric" placeholder="0" />
+      </div>
+      <div class="field">
+        <label for="taxaMensalObra">Juros de obra (% a.m.)</label>
+        <input id="taxaMensalObra" type="text" inputmode="decimal" placeholder="0" />
+      </div>
+    </div>
+    <div class="summary-line">
+      <span>Juros de obra estimados até a entrega</span>
+      <span id="saidaJurosObra">R$ 0</span>
+    </div>
+  </div>
+
+  <div id="avisos-entrada"></div>
+
+  <div class="section">
+    <h3>Como a entrada está fechando</h3>
+    <div class="summary-line">
+      <span>Sinal + FGTS</span>
+      <span id="saidaImediatos">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span>Parcelas com a construtora (nominal)</span>
+      <span id="saidaParcelasNominal">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span id="rotuloFalta">Falta fechar</span>
+      <span id="saidaFalta">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span>Custo extra estimado do INCC</span>
+      <span id="saidaCustoINCC">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span class="total">Desembolso até as chaves (com INCC + obra)</span>
+      <span class="total" id="saidaDesembolso">R$ 0</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Esforço mensal do cliente</h3>
+    <div class="summary-line">
+      <span>Renda bruta (do Passo 1)</span>
+      <span id="saidaRenda">—</span>
+    </div>
+    <div class="summary-line">
+      <span>Maior parcela mensal na obra (com INCC)</span>
+      <span id="saidaEsforco">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span>Maior balão (com INCC)</span>
+      <span id="saidaBalao">R$ 0</span>
+    </div>
+    <div class="summary-line">
+      <span class="total">Prestação da Caixa depois das chaves</span>
+      <span class="total" id="saidaPrestacao">—</span>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btn-continuar">Continuar para a Estratégia →</button>
+</main>
+
+<nav class="stepper" style="display:none"></nav>
+
+<script type="module" src="js/screens/entrada.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+}
+</script>
+</body>
+</html>
