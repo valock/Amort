@@ -20,9 +20,12 @@ import {
   criarGraficoSaldoControle,
   criarGraficoComposicao,
   criarGraficoRosca,
+  criarGraficoBarras,
   padSerie,
   SERIES,
 } from "../charts.js";
+import { simularAporte, sugestoesDeAporte, prazoParaQuitar } from "../calc/simulador.js";
+import { segurosETarifasMensais, taxaMensalCaixa, primeiraParcelaBase } from "../calc/caixa.js";
 import { saudeDoContrato } from "../calc/saude.js";
 import { composicaoDoImovel, composicaoDoDesembolso } from "../calc/composicao.js";
 import { planilhaParaCSV, baixarCSV, nomeArquivoPlanilha } from "../csv.js";
@@ -31,6 +34,8 @@ let cliente = null;
 let anoVisivel = null;
 let graficosLinha = [];
 let graficosRosca = [];
+let graficoCompara = null;
+let simInicializado = false;
 let planilhaRenderizada = false;
 
 async function iniciar() {
@@ -110,6 +115,7 @@ function configurarAbas() {
       // então os gráficos de cada aba são criados quando ela aparece.
       if (btn.dataset.aba === "evolucao") renderGraficosEvolucao();
       if (btn.dataset.aba === "painel") renderRoscas();
+      if (btn.dataset.aba === "simular") abrirSimulador();
     });
   });
 }
@@ -685,3 +691,176 @@ function campoNumerico({ rotulo, placeholder, valor, aoConfirmar }) {
 }
 
 iniciar();
+
+// ---------------------------------------------------------------- Simular
+
+// Situação do financiamento no mês corrente, que é a base de toda simulação.
+function situacaoAtual() {
+  const a = cliente.aprovacao;
+  const ac = cliente.acompanhamento;
+  const chaves = ac.mesEntregaChaves || 0;
+  const taxaMensal = taxaMensalCaixa(a.jurosNominalAnual, a.trAnual);
+  const segurosMensais = segurosETarifasMensais({
+    primeiraPrestacaoDoc: a.primeiraPrestacaoDoc,
+    valorFinanciamento: a.valorFinanciamento,
+    prazoMeses: a.prazoMeses,
+    taxaMensal,
+    sistema: a.sistema,
+  });
+  const parcelaBase = primeiraParcelaBase({
+    valorFinanciamento: a.valorFinanciamento,
+    prazoMeses: a.prazoMeses,
+    taxaMensal,
+    sistema: a.sistema,
+  });
+
+  const { linhas } = planilhaCaixa(cliente);
+  const mesHoje = mesContratoHoje(ac.dataBaseISO);
+
+  // Antes das chaves ainda não há saldo a amortizar: usa o financiamento cheio,
+  // para o cliente poder simular desde já.
+  let saldoAtual = a.valorFinanciamento;
+  if (chaves && mesHoje >= chaves) {
+    const linha = linhas[mesHoje - chaves];
+    if (linha) saldoAtual = linha.saldo;
+  }
+
+  // O prazo de partida é DERIVADO do saldo com a parcela contratual, e não
+  // contado na planilha. A planilha já embute os aportes projetados (FGTS, 13º),
+  // então o prazo dela é o do plano, não o do contrato — misturar os dois fazia
+  // a simulação comparar cenários diferentes e chegar a "economia negativa".
+  const prazoDerivado = prazoParaQuitar({ saldo: saldoAtual, taxaMensal, parcela: parcelaBase });
+  const prazoRestante = Number.isFinite(prazoDerivado)
+    ? Math.max(1, Math.ceil(prazoDerivado))
+    : a.prazoMeses;
+
+  return { taxaMensal, segurosMensais, parcelaBase, saldoAtual, prazoRestante, mesHoje, chaves };
+}
+
+function abrirSimulador() {
+  const sit = situacaoAtual();
+  setTexto("simSaldoHoje", fmtMoeda(sit.saldoAtual));
+  setTexto("simPrazoHoje", `${sit.prazoRestante} (${fmtPrazo(sit.prazoRestante)})`);
+
+  if (simInicializado) {
+    recalcularSimulacao();
+    return;
+  }
+  simInicializado = true;
+
+  const inputValor = document.getElementById("simValor");
+  const inputDias = document.getElementById("simDias");
+  inputValor.addEventListener("input", recalcularSimulacao);
+  inputDias.addEventListener("input", recalcularSimulacao);
+
+  // Atalhos para o cliente explorar sem digitar
+  const atalhos = document.getElementById("atalhosAporte");
+  atalhos.innerHTML = "";
+  const prestacao = sit.parcelaBase + sit.segurosMensais;
+  for (const s of sugestoesDeAporte({ prestacao, saldoAtual: sit.saldoAtual })) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = s.rotulo;
+    b.title = fmtMoeda(s.valor);
+    b.addEventListener("click", () => {
+      inputValor.value = paraInput(s.valor);
+      recalcularSimulacao();
+    });
+    atalhos.appendChild(b);
+  }
+
+  document.getElementById("btn-registrar-aporte").addEventListener("click", registrarAporteSimulado);
+  recalcularSimulacao();
+}
+
+function recalcularSimulacao() {
+  const sit = situacaoAtual();
+  const aporte = parseNum(document.getElementById("simValor").value);
+  const dias = Math.round(parseNum(document.getElementById("simDias").value));
+  const painel = document.getElementById("simResultado");
+
+  if (!aporte || aporte <= 0 || !sit.saldoAtual) {
+    painel.style.display = "none";
+    return;
+  }
+  painel.style.display = "block";
+
+  const s = simularAporte({
+    saldoAtual: sit.saldoAtual,
+    prazoRestanteMeses: sit.prazoRestante,
+    taxaMensal: sit.taxaMensal,
+    parcelaBase: sit.parcelaBase,
+    segurosMensais: sit.segurosMensais,
+    aporte,
+    dias,
+  });
+
+  setTexto("simBruto", fmtMoeda(s.reparticao.bruto));
+  setTexto("simJurosDiarios", fmtMoeda(s.reparticao.jurosDiarios));
+  setTexto("simAmortEfetiva", fmtMoeda(s.reparticao.amortizacaoEfetiva));
+
+  setTexto(
+    "prazoNovoPrazo",
+    Number.isFinite(s.prazo.prazoMeses)
+      ? `${s.prazo.prazoMeses} (${fmtPrazo(s.prazo.prazoMeses)})`
+      : "—"
+  );
+  setTexto("prazoPrestacao", `${fmtMoeda(s.prazo.prestacao)} (não muda)`);
+  setTexto("prazoEconomia", fmtMoeda(s.prazo.jurosEconomizados));
+
+  setTexto("prestacaoNovoPrazo", `${s.prestacao.prazoMeses} (não muda)`);
+  setTexto(
+    "prestacaoNova",
+    s.prestacao.alivioMensal > 0
+      ? `${fmtMoeda(s.prestacao.prestacao)} (−${fmtMoeda(s.prestacao.alivioMensal)}/mês)`
+      : fmtMoeda(s.prestacao.prestacao)
+  );
+  setTexto("prestacaoEconomia", fmtMoeda(s.prestacao.jurosEconomizados));
+
+  // Barra horizontal: comparar comprimento é mais fácil que comparar ângulo
+  if (graficoCompara) graficoCompara.destroy();
+  graficoCompara = criarGraficoBarras("graficoComparaModos", {
+    rotulos: ["Reduzir prazo", "Reduzir prestação"],
+    valores: [s.prazo.jurosEconomizados, s.prestacao.jurosEconomizados],
+    cores: [SERIES[2], SERIES[0]],
+    formatador: (v) => fmtMoedaCurta(v),
+  });
+
+  const vezes =
+    s.prestacao.jurosEconomizados > 0
+      ? s.prazo.jurosEconomizados / s.prestacao.jurosEconomizados
+      : 0;
+  document.getElementById("hintCompara").textContent = vezes > 1
+    ? `Reduzindo o prazo você economiza ${vezes.toFixed(1).replace(".", ",")}x mais juros, ` +
+      `e ainda fica livre da dívida ${fmtPrazo(s.prazo.mesesEconomizados)} antes.`
+    : "";
+
+  const mesAlvo = sit.chaves && sit.mesHoje >= sit.chaves ? sit.mesHoje : sit.chaves;
+  document.getElementById("hintRegistrar").textContent = mesAlvo
+    ? `Vai lançar ${fmtMoeda(aporte)} em ${rotuloMes(cliente.acompanhamento.dataBaseISO, mesAlvo, {
+        comAnoCompleto: true,
+      })}. Você pode ajustar depois na aba Meses.`
+    : "";
+}
+
+async function registrarAporteSimulado() {
+  const sit = situacaoAtual();
+  const aporte = parseNum(document.getElementById("simValor").value);
+  if (!aporte || aporte <= 0) return;
+
+  // Lança no mês corrente; antes das chaves, no primeiro mês de amortização
+  const mesAlvo = sit.chaves && sit.mesHoje >= sit.chaves ? sit.mesHoje : sit.chaves;
+  if (!mesAlvo) return;
+
+  const chave = String(mesAlvo);
+  const atual = cliente.acompanhamento.meses[chave] || {};
+  cliente.acompanhamento.meses[chave] = { ...atual, aporte: (atual.aporte || 0) + aporte };
+  await persistir();
+
+  const btn = document.getElementById("btn-registrar-aporte");
+  btn.textContent = "✓ Aporte registrado";
+  setTimeout(() => (btn.textContent = "Registrar este aporte no meu controle"), 2500);
+
+  renderTudo();
+  abrirSimulador();
+}

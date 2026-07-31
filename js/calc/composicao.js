@@ -11,6 +11,7 @@ import { entradaNecessaria } from "./caixa.js";
 import { resumoEntrada, expandirParcelas } from "./entrada.js";
 import { calcularJurosObra, totalJurosObra } from "./evolucaoObra.js";
 import { planilhaCaixa } from "./cronograma.js";
+import { parametrosCorrecao } from "./correcao.js";
 
 /**
  * De onde vem o valor do imóvel. Sempre soma exatamente o valor de compra e
@@ -44,7 +45,7 @@ export function composicaoDoDesembolso(cliente) {
     sinal: e.sinal,
     fgtsNaEntrada: e.fgtsNaEntrada,
     parcelas: expandirParcelas(e),
-    inccMensal: e.inccMensal,
+    correcao: parametrosCorrecao(cliente),
   });
 
   let jurosObra = 0;
@@ -65,7 +66,7 @@ export function composicaoDoDesembolso(cliente) {
     { chave: "imovel", rotulo: "O imóvel (vira seu patrimônio)", valor: patrimonio },
     { chave: "juros", rotulo: "Juros do financiamento", valor: totais.juros },
     { chave: "seguros", rotulo: "Seguros e tarifas", valor: totais.seguros + jurosObra },
-    { chave: "incc", rotulo: "Correção INCC na obra", valor: Math.max(0, resumo.custoINCC) },
+    { chave: "incc", rotulo: "Correção das parcelas", valor: Math.max(0, resumo.custoCorrecao) },
   ].filter((f) => f.valor > 0);
 
   const total = fatias.reduce((acc, f) => acc + f.valor, 0);

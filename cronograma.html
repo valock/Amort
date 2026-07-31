@@ -30,6 +30,7 @@
 
     <div class="tabs" role="tablist">
       <button type="button" class="tab ativa" data-aba="painel">Painel</button>
+      <button type="button" class="tab" data-aba="simular">Simular</button>
       <button type="button" class="tab" data-aba="evolucao">Evolução</button>
       <button type="button" class="tab" data-aba="meses">Meses</button>
       <button type="button" class="tab" data-aba="planilha">Planilha</button>
@@ -88,6 +89,115 @@
         </div>
         <ul class="legenda-rosca" id="legendaDesembolso"></ul>
         <p class="hint" id="hintDesembolso"></p>
+      </div>
+    </section>
+
+
+    <!-- ============ ABA SIMULAR ============ -->
+    <section class="painel-aba" data-painel="simular" hidden>
+      <div class="section">
+        <h3>E se eu adiantar um valor?</h3>
+        <p class="hint" style="margin-bottom:16px">
+          Escolha um valor e veja o que acontece com a sua dívida. É a mesma conta que o
+          aplicativo da Caixa faz na opção <em>Reduzir saldo ou quitar</em>.
+        </p>
+
+        <div class="field">
+          <label for="simValor">Quanto você quer adiantar (R$)</label>
+          <input id="simValor" type="text" inputmode="decimal" placeholder="0,00" />
+        </div>
+        <div class="atalhos" id="atalhosAporte"></div>
+
+        <div class="summary-line">
+          <span>Saldo devedor hoje</span>
+          <span id="simSaldoHoje">—</span>
+        </div>
+        <div class="summary-line">
+          <span>Prestações que faltam</span>
+          <span id="simPrazoHoje">—</span>
+        </div>
+      </div>
+
+      <div id="simResultado" style="display:none">
+        <div class="section">
+          <h3>Quanto do seu pagamento abate a dívida</h3>
+          <div class="summary-line">
+            <span>Você paga</span>
+            <span id="simBruto">—</span>
+          </div>
+          <div class="summary-line">
+            <span>Juros corridos desde o vencimento</span>
+            <span id="simJurosDiarios">—</span>
+          </div>
+          <div class="summary-line">
+            <span class="total">Abate de verdade da dívida</span>
+            <span class="total" id="simAmortEfetiva">—</span>
+          </div>
+          <div class="field" style="margin-top:16px">
+            <label for="simDias">Dias desde o último vencimento</label>
+            <input id="simDias" type="text" inputmode="numeric" placeholder="0" />
+          </div>
+          <p class="hint">
+            Pagando no dia do vencimento, o valor inteiro abate a dívida. Quanto mais dias
+            passam, mais uma parte vira juros do período.
+          </p>
+        </div>
+
+        <h3 style="margin:26px 0 12px">Os dois caminhos que o banco oferece</h3>
+
+        <div class="opcao-card recomendada" id="cardPrazo">
+          <div class="opcao-topo">
+            <span class="opcao-selo">Economiza mais</span>
+            <div class="opcao-titulo">Reduzir o PRAZO</div>
+          </div>
+          <p class="opcao-desc">Você continua pagando a mesma prestação, mas por menos tempo.</p>
+          <div class="summary-line">
+            <span>Novo prazo</span>
+            <span class="total" id="prazoNovoPrazo">—</span>
+          </div>
+          <div class="summary-line">
+            <span>Prestação</span>
+            <span id="prazoPrestacao">—</span>
+          </div>
+          <div class="opcao-destaque">
+            <div class="opcao-destaque-label">Juros que você deixa de pagar</div>
+            <div class="opcao-destaque-valor" id="prazoEconomia">—</div>
+          </div>
+        </div>
+
+        <div class="opcao-card" id="cardPrestacao">
+          <div class="opcao-topo">
+            <div class="opcao-titulo">Reduzir a PRESTAÇÃO</div>
+          </div>
+          <p class="opcao-desc">Você paga menos por mês, mas continua pagando pelo mesmo tempo.</p>
+          <div class="summary-line">
+            <span>Prazo</span>
+            <span id="prestacaoNovoPrazo">—</span>
+          </div>
+          <div class="summary-line">
+            <span>Nova prestação</span>
+            <span class="total" id="prestacaoNova">—</span>
+          </div>
+          <div class="opcao-destaque">
+            <div class="opcao-destaque-label">Juros que você deixa de pagar</div>
+            <div class="opcao-destaque-valor" id="prestacaoEconomia">—</div>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <h3>Comparando os dois caminhos</h3>
+          <div class="rosca-wrap" style="max-width:300px">
+            <canvas id="graficoComparaModos"></canvas>
+          </div>
+          <p class="hint" id="hintCompara"></p>
+        </div>
+
+        <div class="section">
+          <button type="button" class="btn btn-primary" id="btn-registrar-aporte">
+            Registrar este aporte no meu controle
+          </button>
+          <p class="hint" id="hintRegistrar"></p>
+        </div>
       </div>
     </section>
 

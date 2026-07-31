@@ -82,13 +82,35 @@
   <div class="section">
     <div class="warning-badge">
       <span class="icon">⚠️</span>
-      <span>Parcelas futuras com a construtora são corrigidas pelo <strong>INCC</strong>. A projeção abaixo usa a taxa informada — é estimativa, não o índice oficial mês a mês.</span>
+      <span>As parcelas da construtora mudam de índice na entrega das chaves: <strong>INCC</strong> durante
+      a obra e, depois, em geral um juro fixo somado à inflação. <strong>Cada construtora escreve
+      essa regra do seu jeito</strong> — confira o contrato e ajuste abaixo. As taxas são estimativas,
+      não índices oficiais projetados.</span>
     </div>
 
     <div class="field">
-      <label for="inccMensal">INCC mensal estimado (%)</label>
+      <label for="inccMensal">Durante a obra — INCC mensal estimado (%)</label>
       <input id="inccMensal" type="text" inputmode="decimal" placeholder="0,50" />
     </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="jurosPosChaves">Após as chaves — juros (% a.m.)</label>
+        <input id="jurosPosChaves" type="text" inputmode="decimal" placeholder="1,00" />
+      </div>
+      <div class="field">
+        <label for="inflacaoPosChaves">Após as chaves — inflação (% a.m.)</label>
+        <input id="inflacaoPosChaves" type="text" inputmode="decimal" placeholder="0,40" />
+      </div>
+    </div>
+    <div class="summary-line">
+      <span>Correção após as chaves</span>
+      <span id="saidaTaxaPosChaves">—</span>
+    </div>
+    <p class="hint">
+      Só afeta parcelas que vencem depois da entrega. Se o parcelamento termina antes
+      das chaves, apenas o INCC incide.
+    </p>
   </div>
 
   <div class="section">

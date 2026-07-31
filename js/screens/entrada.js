@@ -12,6 +12,7 @@ import {
   valorParcelaParaFechar,
 } from "../calc/entrada.js";
 import { calcularJurosObra, totalJurosObra } from "../calc/evolucaoObra.js";
+import { parametrosCorrecao, taxaPosChaves } from "../calc/correcao.js";
 import { rotuloMes, mesAtualISO } from "../calc/calendario.js";
 
 async function iniciar() {
@@ -49,6 +50,8 @@ async function iniciar() {
   ligarCampo("sinal", e, "sinal", { aoMudar: recalcular });
   ligarCampo("fgtsNaEntrada", e, "fgtsNaEntrada", { aoMudar: recalcular });
   ligarCampo("inccMensal", e, "inccMensal", { escala: 100, aoMudar: recalcular });
+  ligarCampo("jurosPosChaves", e, "jurosPosChavesMensal", { escala: 100, aoMudar: recalcular });
+  ligarCampo("inflacaoPosChaves", e, "inflacaoPosChavesMensal", { escala: 100, aoMudar: recalcular });
   ligarCampo("prazoObraMeses", e, "prazoObraMeses", { aoMudar: recalcular });
   ligarCampo("taxaMensalObra", e, "taxaMensalObra", { escala: 100, aoMudar: recalcular });
 
@@ -102,7 +105,7 @@ async function iniciar() {
       sinal: e.sinal,
       fgtsNaEntrada: e.fgtsNaEntrada,
       parcelas,
-      inccMensal: e.inccMensal,
+      correcao: parametrosCorrecao(cliente),
     });
 
     let jurosObra = 0;
@@ -128,17 +131,23 @@ async function iniciar() {
       setTexto("saidaFalta", fmtMoeda(Math.abs(falta)));
     }
 
-    setTexto("saidaCustoINCC", fmtMoeda(resumo.custoINCC));
+    setTexto("saidaCustoINCC", fmtMoeda(resumo.custoCorrecao));
     setTexto("saidaDesembolso", fmtMoeda(resumo.desembolsoTotalCorrigido + jurosObra));
 
-    const esforco = esforcoMensalMaximo(parcelas, e.inccMensal);
+    const correcao = parametrosCorrecao(cliente);
+    const esforco = esforcoMensalMaximo(parcelas, correcao);
     setTexto(
       "saidaEsforco",
       a.rendaBruta && esforco
         ? `${fmtMoeda(esforco)} (${fmtPct(esforco / a.rendaBruta, 0)} da renda)`
         : fmtMoeda(esforco)
     );
-    setTexto("saidaBalao", fmtMoeda(maiorBalao(parcelas, e.inccMensal)));
+    setTexto("saidaBalao", fmtMoeda(maiorBalao(parcelas, correcao)));
+    setTexto(
+      "saidaTaxaPosChaves",
+      fmtPct(taxaPosChaves({ jurosMensal: e.jurosPosChavesMensal, inflacaoMensal: e.inflacaoPosChavesMensal }), 3) +
+        " ao mês"
+    );
 
     renderAvisos(
       "avisos-entrada",

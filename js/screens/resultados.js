@@ -5,6 +5,7 @@ import { setTexto, renderAvisos } from "../ui.js";
 import { gerarLinkCompartilhavel, textoWhatsApp } from "../compartilhar.js";
 import { entradaNecessaria, taxaEfetivaAnual } from "../calc/caixa.js";
 import { resumoEntrada, expandirParcelas } from "../calc/entrada.js";
+import { parametrosCorrecao } from "../calc/correcao.js";
 import { calcularJurosObra, totalJurosObra } from "../calc/evolucaoObra.js";
 import { calcularCenarios } from "../calc/cenarios.js";
 import { criarGraficoComparativo, padSerie } from "../charts.js";
@@ -46,7 +47,7 @@ async function iniciar() {
     sinal: e.sinal,
     fgtsNaEntrada: e.fgtsNaEntrada,
     parcelas: expandirParcelas(e),
-    inccMensal: e.inccMensal,
+    correcao: parametrosCorrecao(cliente),
   });
 
   let jurosObra = 0;
@@ -56,7 +57,7 @@ async function iniciar() {
 
   setTexto("linhaImediatos", fmtMoeda(resumo.recursosImediatos));
   setTexto("linhaParcelasNominal", fmtMoeda(resumo.nominalParcelas));
-  setTexto("linhaINCC", fmtMoeda(resumo.custoINCC));
+  setTexto("linhaINCC", fmtMoeda(resumo.custoCorrecao));
   setTexto("linhaJurosObra", fmtMoeda(jurosObra));
   setTexto("linhaTotalObra", fmtMoeda(resumo.desembolsoTotalCorrigido + jurosObra));
 

@@ -67,9 +67,22 @@ valor do imóvel = financiamento (Caixa) + subsídio + entrada (construtora)
 - **Correspondente**: o parceiro que roda a simulação no sistema da Caixa e
   manda o PDF de aprovação para o corretor. É esse PDF que alimenta o Passo 1.
 - **INCC** (Índice Nacional de Custo da Construção): corrige as parcelas pagas
-  à construtora durante a obra. Encarece o parcelamento e quase nunca entra na
-  conversa de venda. No app é uma **taxa estimada informada pelo usuário**, não
-  o índice oficial mês a mês.
+  à construtora **durante a obra**. Encarece o parcelamento e quase nunca entra
+  na conversa de venda. No app é uma **taxa estimada informada pelo usuário**,
+  não o índice oficial mês a mês.
+- **Correção pós-chaves**: entregue o imóvel, o contrato da construtora troca de
+  índice — em geral um juro fixo mensal somado à inflação, sendo "1% + IPCA" o
+  arranjo mais comum. **Cada construtora escreve isso do seu jeito**, então os
+  parâmetros são configuráveis. Ver `js/calc/correcao.js`.
+- **Amortização por prazo x por prestação**: as duas opções que o app da Caixa
+  oferece ao adiantar dinheiro. Reduzir prazo mantém a parcela e encurta o
+  financiamento; reduzir prestação mantém o prazo e alivia o mês. Reduzir prazo
+  economiza bem mais juros — mostrar essa diferença é o ponto do simulador.
+- **Juros diários / amortização efetiva**: um aporte não abate integralmente a
+  dívida. Parte paga os juros corridos desde o último vencimento, e só o resto
+  amortiza. Ver o invariante 13.
+- **FGHAB**: fundo garantidor do MCMV, cobrado dentro da prestação junto com os
+  seguros.
 - **FGTS**: fundo obrigatório onde o empregador deposita ~8% do salário bruto
   por mês. Serve para duas coisas neste app: compor a **entrada** e, depois das
   chaves, **amortizar** o financiamento. O saque para amortização respeita um
@@ -173,6 +186,20 @@ teste.
    barra de progresso; rosca só para composição parte-do-todo, com até 6
    fatias. E nunca dois eixos Y no mesmo gráfico.
 
+13. **Um aporte não amortiza integralmente**, e isso está travado contra uma
+   simulação real do app da Caixa. Parte do valor paga os juros corridos desde o
+   último vencimento — a base é 1/30 da taxa mensal por dia — e só o resto vira
+   "amortização efetiva". No caso real: R$ 869,41 pagos com 25 dias corridos
+   viraram R$ 3,60 de juros e R$ 865,81 de abatimento, e
+   `saldo − 865,81` deu exatamente o novo saldo que o banco mostra.
+   Ver `repartirAporte` em `js/calc/simulador.js` e
+   `testes/simulador-caixa-real.mjs`.
+
+14. **O prazo de partida do simulador é DERIVADO do saldo com a parcela
+   contratual**, nunca contado na planilha. A planilha já embute os aportes
+   projetados (FGTS, 13º), então o prazo dela é o do plano e não o do contrato.
+   Misturar os dois já produziu "economia negativa" na tela.
+
 ---
 
 ## Arquitetura
@@ -196,6 +223,8 @@ js/calc/           Matemática pura. Sem DOM, sem estado global.
   cenarios.js        Fonte única dos aportes projetados + cenários comparados
   saude.js           Indicadores de saúde do contrato (status + ícone + texto)
   composicao.js      Composições parte-do-todo das roscas
+  correcao.js        Correção das parcelas da construtora em duas fases
+  simulador.js       Simulação de aporte nos modos prazo e prestação
   calendario.js      Mês do contrato <-> mês do calendário (só aqui há datas)
   cronograma.js      Compromisso de cada mês, planilha das parcelas e séries
                      dos gráficos; reage ao que o cliente registrou
@@ -259,6 +288,7 @@ node testes/caso-caixa-real.mjs        # trava os números do documento oficial
 node testes/motor-amortizacao.mjs      # SAC/Price, FGTS, 13º, INCC, juros de obra
 node testes/cronograma.mjs             # datas, as duas fases, planilha, gráficos e CSV
 node testes/saude-e-composicao.mjs     # indicadores de saúde e composições das roscas
+node testes/simulador-caixa-real.mjs   # simulador travado contra o app da Caixa
 node testes/verificar-anonimizacao.mjs # varre o repo por dado pessoal
 ```
 

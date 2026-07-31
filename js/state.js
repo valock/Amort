@@ -1,5 +1,7 @@
 import { novoId, carregarCliente, salvarCliente } from "./storage.js";
 
+export const VERSAO_MODELO = 5;
+
 // Modelo espelhando o fluxo real de venda:
 //   aprovacao  -> a simulação que o correspondente manda (Caixa)
 //   entrada    -> o que fica com a construtora (sinal, FGTS, parcelas, balões)
@@ -9,7 +11,7 @@ export function clienteVazio(nome) {
     id: novoId(),
     nome: nome || "Novo cliente",
     criadoEm: new Date().toISOString(),
-    versaoModelo: 4,
+    versaoModelo: VERSAO_MODELO,
     aprovacao: {
       valorImovel: 0,
       valorAvaliacao: 0,
@@ -31,7 +33,12 @@ export function clienteVazio(nome) {
       // Parcelamento no formato do contrato: uma série mensal uniforme + balões
       serieMensal: { quantidade: 0, valor: 0, mesInicial: 1 },
       baloes: [],
+      // Correção das parcelas da construtora, em duas fases. Cada construtora
+      // escreve a regra do seu jeito; o padrão aqui é o arranjo mais comum
+      // (INCC na obra, 1% + inflação depois das chaves) e é editável.
       inccMensal: 0.005,
+      jurosPosChavesMensal: 0.01,
+      inflacaoPosChavesMensal: 0.004,
       prazoObraMeses: 0,
       taxaMensalObra: 0,
     },
@@ -53,34 +60,41 @@ export function clienteVazio(nome) {
   };
 }
 
-// Casos salvos na primeira versão do app (fechamento/estrategia com taxa
-// anual) continuam abrindo: o que dá para reaproveitar é migrado, o resto
-// entra com o padrão novo.
+// Casos salvos em versões anteriores continuam abrindo. Cada passo sobe UMA
+// versão e chama a migração de novo, então um caso antigo atravessa a cadeia
+// inteira sem que cada passo precise conhecer os seguintes.
 export function migrarCliente(cliente) {
-  if (!cliente || cliente.versaoModelo === 4) return cliente;
+  if (!cliente || cliente.versaoModelo === VERSAO_MODELO) return cliente;
+
+  // v4 -> v5: a correção da entrada ganha a fase pós-chaves
+  if (cliente.versaoModelo === 4) {
+    return migrarCliente({
+      ...cliente,
+      versaoModelo: 5,
+      entrada: {
+        ...cliente.entrada,
+        jurosPosChavesMensal: cliente.entrada?.jurosPosChavesMensal ?? 0.01,
+        inflacaoPosChavesMensal: cliente.entrada?.inflacaoPosChavesMensal ?? 0.004,
+      },
+    });
+  }
 
   // v3 -> v4: ganha o bloco de acompanhamento mês a mês
   if (cliente.versaoModelo === 3) {
-    return {
+    return migrarCliente({
       ...cliente,
       versaoModelo: 4,
       acompanhamento: cliente.acompanhamento || { dataBaseISO: "", mesEntregaChaves: 0, meses: {} },
-    };
+    });
   }
 
   // v2 -> v3: parcelas soltas viram série mensal + balões
   if (cliente.versaoModelo === 2) {
-    const atualizado = { ...cliente, versaoModelo: 4 };
-    atualizado.acompanhamento = cliente.acompanhamento || {
-      dataBaseISO: "",
-      mesEntregaChaves: 0,
-      meses: {},
-    };
     const parcelas = cliente.entrada?.parcelas || [];
     const mensais = parcelas.filter((p) => (p.tipo || "mensal") === "mensal");
     const baloes = parcelas.filter((p) => p.tipo === "balao");
 
-    atualizado.entrada = {
+    const entrada = {
       ...cliente.entrada,
       serieMensal: mensais.length
         ? {
@@ -91,8 +105,9 @@ export function migrarCliente(cliente) {
         : { quantidade: 0, valor: 0, mesInicial: 1 },
       baloes: baloes.map((b) => ({ mes: b.mes, valor: b.valor })),
     };
-    delete atualizado.entrada.parcelas;
-    return atualizado;
+    delete entrada.parcelas;
+
+    return migrarCliente({ ...cliente, versaoModelo: 3, entrada });
   }
 
   const base = clienteVazio(cliente.nome);

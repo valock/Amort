@@ -17,6 +17,7 @@ import {
 import { simular, prazoEfetivoMeses, totalJuros } from "../js/calc/amortizacao.js";
 import { parseNum } from "../js/format.js";
 import { resumoEntrada, esforcoMensalMaximo, expandirParcelas, valorParcelaParaFechar } from "../js/calc/entrada.js";
+import { parametrosCorrecao } from "../js/calc/correcao.js";
 
 let falhas = 0;
 function eq(obtido, esperado, msg, eps = 0.01) {
@@ -101,12 +102,14 @@ function cenario({ sinal, fgts, quantidade }) {
   const valor = valorParcelaParaFechar({
     entradaNecessaria: precisa, sinal, fgtsNaEntrada: fgts, baloes: [], quantidade,
   });
-  const entrada = { serieMensal: { quantidade, valor, mesInicial: 1 }, baloes: [] };
+  const entrada = { serieMensal: { quantidade, valor, mesInicial: 1 }, baloes: [], inccMensal: 0.005 };
   const parcelas = expandirParcelas(entrada);
+  // Cenário só de obra: sem mês de chaves, toda a correção é INCC
+  const correcao = parametrosCorrecao({ entrada, acompanhamento: {} });
   const resumo = resumoEntrada({
-    entradaNecessaria: precisa, sinal, fgtsNaEntrada: fgts, parcelas, inccMensal: 0.005,
+    entradaNecessaria: precisa, sinal, fgtsNaEntrada: fgts, parcelas, correcao,
   });
-  return { valor, resumo, esforco: esforcoMensalMaximo(parcelas, 0.005), parcelas };
+  return { valor, resumo, esforco: esforcoMensalMaximo(parcelas, correcao), parcelas };
 }
 
 // Cenário 1: sem FGTS na entrada, diluindo em 24 meses
@@ -116,7 +119,7 @@ truthy(Math.abs(c1.resumo.faltaFechar) <= 1, "série de 24x fecha a entrada (tol
 console.log(`   parcela sem FGTS: R$ ${c1.esforco.toFixed(2)} vs renda R$ ${APROVACAO.rendaBruta.toFixed(2)}`);
 truthy(c1.esforco > APROVACAO.rendaBruta,
   "sem FGTS a parcela da construtora estoura a renda (o app precisa alertar)");
-console.log(`   custo extra do INCC: R$ ${c1.resumo.custoINCC.toFixed(2)}`);
+console.log(`   custo extra do INCC: R$ ${c1.resumo.custoCorrecao.toFixed(2)}`);
 
 // Cenário 2: com sinal + FGTS, o esforço cai
 const c2 = cenario({ sinal: 10000, fgts: 25000, quantidade: 24 });

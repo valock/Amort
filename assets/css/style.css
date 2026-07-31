@@ -457,23 +457,30 @@ button.btn-ghost {
 
 .tabs {
   display: flex;
-  gap: 8px;
+  gap: 3px;
   margin-bottom: var(--gap);
   background: var(--bg-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 6px;
+  padding: 5px;
+  /* Rede de segurança: com 5 abas, telas bem estreitas rolam a faixa em vez de
+     empurrar a página inteira para o lado. */
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
-  flex: 1;
-  font-size: 0.98rem;
+  flex: 1 0 auto;
+  min-width: 0;
+  font-size: 0.84rem;
   font-weight: 700;
-  padding: 12px 6px;
+  padding: 11px 5px;
   border: none;
   border-radius: 12px;
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
+  white-space: nowrap;
 }
 .tab.ativa {
   background: var(--accent);
@@ -721,3 +728,68 @@ table.planilha tfoot td {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Aba Simular ---- */
+
+.atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.atalhos button {
+  flex: 1 1 auto;
+  font-size: 0.92rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.atalhos button:hover { border-color: var(--accent); }
+
+.opcao-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: var(--gap);
+}
+.opcao-card.recomendada { border-color: var(--good); }
+
+.opcao-topo { margin-bottom: 6px; }
+.opcao-selo {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bg);
+  background: var(--good);
+  padding: 3px 9px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+.opcao-titulo { font-size: 1.2rem; font-weight: 800; }
+.opcao-desc {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  margin: 4px 0 14px;
+}
+
+.opcao-destaque {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.opcao-destaque-label { font-size: 0.85rem; color: var(--text-dim); }
+.opcao-destaque-valor {
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.opcao-card.recomendada .opcao-destaque-valor { color: var(--good); }

@@ -23,11 +23,15 @@ Cada cliente é um caso salvo só no dispositivo — nada é enviado a servidore
    avulsos, todos abatendo o **prazo** e não a parcela.
 4. **O resultado** — economia de juros, tempo poupado, seguros evitados e dois
    gráficos comparando o cenário sem amortizar com o estratégico.
-5. **O controle mês a mês** — a tela do cliente, em três abas:
+5. **O controle mês a mês** — a tela do cliente, em cinco abas:
    - *Resumo*: onde ele está, quanto da dívida já quitou, quando quita, e dois
      gráficos — a dívida caindo no ritmo dele contra o ritmo mínimo (com o mês
      atual marcado), e para onde vai cada prestação (juros vs amortização).
-   - *Meus meses*: o cronograma com datas reais, encadeando as parcelas da
+   - *Simular*: o cliente digita um valor e vê, lado a lado, o que acontece
+     reduzindo o **prazo** e reduzindo a **prestação** — com a repartição entre
+     juros corridos e abatimento real, como na tela "Reduzir saldo ou quitar" do
+     app da Caixa. Pode registrar o aporte no próprio controle.
+   - *Meses*: o cronograma com datas reais, encadeando as parcelas da
      construtora e a prestação da Caixa pela entrega das chaves. Ele marca o
      que pagou, informa o valor real do boleto e registra os aportes que fez —
      o saldo devedor e a data de quitação se movem conforme cumpre (ou não) o

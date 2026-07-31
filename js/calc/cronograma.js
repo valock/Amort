@@ -10,7 +10,7 @@
 // Caixa. Sem esse elo, as duas frentes da compra ficam soltas e o cliente não
 // consegue enxergar o compromisso real de cada mês.
 
-import { corrigirParcelas } from "./incc.js";
+import { corrigirParcelasEmFases, parametrosCorrecao } from "./correcao.js";
 import { expandirParcelas } from "./entrada.js";
 import { calcularJurosObra } from "./evolucaoObra.js";
 import { taxaMensalCaixa, segurosETarifasMensais, primeiraParcelaBase } from "./caixa.js";
@@ -100,8 +100,9 @@ export function construirCronograma(cliente) {
   const ac = cliente.acompanhamento || {};
   const chaves = ac.mesEntregaChaves || 0;
 
-  // Fase 1: parcelas da construtora já corrigidas pelo INCC
-  const parcelasCorrigidas = corrigirParcelas(expandirParcelas(e), e.inccMensal || 0);
+  // Parcelas da construtora corrigidas nas duas fases: INCC durante a obra e,
+  // depois das chaves, o índice que o contrato da construtora determinar.
+  const parcelasCorrigidas = corrigirParcelasEmFases(expandirParcelas(e), parametrosCorrecao(cliente));
 
   // Fase 1: juros de obra, quando o imóvel está em construção
   const mesesObra =

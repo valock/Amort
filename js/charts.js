@@ -284,3 +284,44 @@ export function criarGraficoRosca(canvasId, { fatias, formatador, tituloCentro, 
     plugins: [pluginCentroRosca({ titulo: tituloCentro, valor: valorCentro })],
   });
 }
+
+/**
+ * Barras horizontais comparando poucas opções. Para "qual caminho economiza
+ * mais" a barra ganha da rosca: o leitor compara comprimento, que é o que o
+ * olho faz melhor, em vez de estimar ângulo.
+ */
+export function criarGraficoBarras(canvasId, { rotulos, valores, cores, formatador }) {
+  return new Chart(document.getElementById(canvasId), {
+    type: "bar",
+    data: {
+      labels: rotulos,
+      datasets: [
+        {
+          data: valores,
+          backgroundColor: cores || valores.map((_, i) => SERIES[i % SERIES.length]),
+          borderColor: SUPERFICIE,
+          borderWidth: 2,
+          borderRadius: 4,
+          barPercentage: 0.62,
+        },
+      ],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (item) => formatador(item.parsed.x) } },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: { color: CINZA, callback: formatador, maxTicksLimit: 4 },
+          grid: { color: GRADE },
+        },
+        y: { ticks: { color: "#f1f5f9", font: { weight: "700" } }, grid: { display: false } },
+      },
+    },
+  });
+}

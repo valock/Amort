@@ -1,10 +1,12 @@
 // Montagem da entrada que fica com a construtora.
 //
 // O contrato com a construtora fecha em valores NOMINAIS (é o que soma para
-// quitar a entrada), mas as parcelas futuras são corrigidas pelo INCC — esse
-// é um custo extra que quase nunca aparece na conversa de venda.
+// quitar a entrada), mas as parcelas futuras são corrigidas — INCC durante a
+// obra e outro índice depois das chaves. Esse custo extra quase nunca aparece
+// na conversa de venda. Ver js/calc/correcao.js.
 
-import { corrigirParcelas, totalNominal, totalCorrigido } from "./incc.js";
+import { totalNominal } from "./incc.js";
+import { corrigirParcelasEmFases, totalCorrigidoEmFases } from "./correcao.js";
 
 // O contrato da construtora é escrito como "N parcelas de R$ X a partir do mês
 // M, mais balões nos meses Y". A UI edita essa forma compacta; o motor precisa
@@ -39,14 +41,14 @@ export function valorParcelaParaFechar({ entradaNecessaria, sinal, fgtsNaEntrada
   return Math.round((restante / qtd) * 100) / 100;
 }
 
-export function resumoEntrada({ entradaNecessaria, sinal, fgtsNaEntrada, parcelas, inccMensal }) {
+export function resumoEntrada({ entradaNecessaria, sinal, fgtsNaEntrada, parcelas, correcao }) {
   const nominalParcelas = totalNominal(parcelas);
-  const corrigidoParcelas = totalCorrigido(parcelas, inccMensal);
+  const corrigidoParcelas = totalCorrigidoEmFases(parcelas, correcao);
   const recursosImediatos = (sinal || 0) + (fgtsNaEntrada || 0);
 
   const montadoNominal = recursosImediatos + nominalParcelas;
   const faltaFechar = (entradaNecessaria || 0) - montadoNominal;
-  const custoINCC = corrigidoParcelas - nominalParcelas;
+  const custoCorrecao = corrigidoParcelas - nominalParcelas;
 
   return {
     nominalParcelas,
@@ -54,21 +56,23 @@ export function resumoEntrada({ entradaNecessaria, sinal, fgtsNaEntrada, parcela
     recursosImediatos,
     montadoNominal,
     faltaFechar,
-    custoINCC,
+    custoCorrecao,
     desembolsoTotalCorrigido: recursosImediatos + corrigidoParcelas,
   };
 }
 
-// Maior compromisso mensal que o cliente vai enfrentar durante a obra, já com
-// INCC. Balões entram separados porque não são esforço recorrente.
-export function esforcoMensalMaximo(parcelas, inccMensal) {
-  const corrigidas = corrigirParcelas(parcelas, inccMensal).filter((p) => (p.tipo || "mensal") === "mensal");
+// Maior compromisso mensal que o cliente vai enfrentar, já corrigido. Balões
+// entram separados porque não são esforço recorrente.
+export function esforcoMensalMaximo(parcelas, correcao) {
+  const corrigidas = corrigirParcelasEmFases(parcelas, correcao).filter(
+    (p) => (p.tipo || "mensal") === "mensal"
+  );
   if (!corrigidas.length) return 0;
   return Math.max(...corrigidas.map((p) => p.valorCorrigido));
 }
 
-export function maiorBalao(parcelas, inccMensal) {
-  const baloes = corrigirParcelas(parcelas, inccMensal).filter((p) => p.tipo === "balao");
+export function maiorBalao(parcelas, correcao) {
+  const baloes = corrigirParcelasEmFases(parcelas, correcao).filter((p) => p.tipo === "balao");
   if (!baloes.length) return 0;
   return Math.max(...baloes.map((p) => p.valorCorrigido));
 }
