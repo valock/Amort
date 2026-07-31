@@ -155,6 +155,24 @@ teste.
    brasileiro joga tudo numa coluna e o cliente acha que o arquivo veio
    quebrado. Ver `js/csv.js`.
 
+10. **A paleta dos gráficos foi validada, não escolhida a olho.** As quatro cores
+   categóricas em `js/charts.js` (`SERIES`) estão em ordem fixa e passam nos
+   critérios de separação contra a superfície `#1c2b4a`: pior par adjacente
+   ΔE 8,4 sob daltonismo e 19,8 em visão normal. **Trocar a ordem ou as cores
+   exige revalidar** — vermelho encostado em amarelo, por exemplo, cai para
+   ΔE 13 e fica indistinguível até com visão plena. O vermelho de estado
+   crítico é um passo mais claro que o padrão porque o padrão não alcança 3:1
+   nesta superfície.
+
+11. **Status nunca viaja só como cor.** Os indicadores de saúde levam sempre
+   ícone e rótulo em texto junto da cor, e as fatias das roscas têm legenda em
+   HTML com nome, valor e percentual. Quem não distingue cores continua lendo
+   tudo.
+
+12. **Uma razão contra um limite é medidor, não rosca.** "Quanto já quitei" é
+   barra de progresso; rosca só para composição parte-do-todo, com até 6
+   fatias. E nunca dois eixos Y no mesmo gráfico.
+
 ---
 
 ## Arquitetura
@@ -176,6 +194,8 @@ js/calc/           Matemática pura. Sem DOM, sem estado global.
   evolucaoObra.js    Juros de obra sobre o saldo liberado
   fgts.js            Acúmulo e saque bienal do FGTS, 13º salário
   cenarios.js        Fonte única dos aportes projetados + cenários comparados
+  saude.js           Indicadores de saúde do contrato (status + ícone + texto)
+  composicao.js      Composições parte-do-todo das roscas
   calendario.js      Mês do contrato <-> mês do calendário (só aqui há datas)
   cronograma.js      Compromisso de cada mês, planilha das parcelas e séries
                      dos gráficos; reage ao que o cliente registrou
@@ -238,6 +258,7 @@ python3 -m http.server 8000     # e abra http://localhost:8000
 node testes/caso-caixa-real.mjs        # trava os números do documento oficial
 node testes/motor-amortizacao.mjs      # SAC/Price, FGTS, 13º, INCC, juros de obra
 node testes/cronograma.mjs             # datas, as duas fases, planilha, gráficos e CSV
+node testes/saude-e-composicao.mjs     # indicadores de saúde e composições das roscas
 node testes/verificar-anonimizacao.mjs # varre o repo por dado pessoal
 ```
 

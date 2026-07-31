@@ -12,7 +12,7 @@
 <body>
 <main>
   <h1 id="nome-cliente">Meu controle</h1>
-  <h2 id="subtitulo">Mês a mês do seu imóvel</h2>
+  <h2 id="subtitulo">Seu imóvel, mês a mês</h2>
 
   <!-- Quando falta configurar as datas -->
   <div id="aviso-configurar" class="section" style="display:none">
@@ -29,17 +29,88 @@
   <div id="conteudo" style="display:none">
 
     <div class="tabs" role="tablist">
-      <button type="button" class="tab ativa" data-aba="resumo">Resumo</button>
-      <button type="button" class="tab" data-aba="meses">Meus meses</button>
+      <button type="button" class="tab ativa" data-aba="painel">Painel</button>
+      <button type="button" class="tab" data-aba="evolucao">Evolução</button>
+      <button type="button" class="tab" data-aba="meses">Meses</button>
       <button type="button" class="tab" data-aba="planilha">Planilha</button>
     </div>
 
-    <!-- ============ ABA RESUMO ============ -->
-    <section class="painel-aba" data-painel="resumo">
-      <div class="result-card" id="cardProximo">
-        <div class="label" id="labelProximo">Próximo vencimento</div>
-        <div class="value" id="valorProximo">—</div>
-        <p class="hint" id="hintProximo"></p>
+    <!-- ============ ABA PAINEL ============ -->
+    <section class="painel-aba" data-painel="painel">
+
+      <!-- Saúde do contrato: status com ícone e texto, nunca cor sozinha -->
+      <div class="saude-card" id="saudeCard">
+        <div class="saude-topo">
+          <span class="saude-icone" id="saudeIcone">•</span>
+          <div>
+            <div class="saude-titulo" id="saudeTitulo">Saúde do contrato</div>
+            <div class="saude-msg" id="saudeMsg">—</div>
+          </div>
+        </div>
+        <div class="indicadores" id="indicadores"></div>
+      </div>
+
+      <!-- Número-herói: o que o cliente mais quer saber -->
+      <div class="hero">
+        <div class="hero-label">Sua quitação está prevista para</div>
+        <div class="hero-valor" id="heroQuitacao">—</div>
+        <div class="hero-detalhe" id="heroDetalhe"></div>
+      </div>
+
+      <!-- KPI row -->
+      <div class="kpi-row" id="kpiRow"></div>
+
+      <!-- Medidor: uma razão contra um limite não é gráfico de pizza -->
+      <div class="section">
+        <h3>Quanto da dívida você já quitou</h3>
+        <div class="barra-progresso">
+          <div class="barra-preenchida" id="barraQuitado"></div>
+        </div>
+        <div class="barra-legenda">
+          <span id="barraTextoEsq">—</span>
+          <span id="barraTextoDir">—</span>
+        </div>
+      </div>
+
+      <!-- Roscas -->
+      <div class="chart-box">
+        <h3>De onde vem o valor do seu imóvel</h3>
+        <div class="rosca-wrap">
+          <canvas id="roscaImovel"></canvas>
+        </div>
+        <ul class="legenda-rosca" id="legendaImovel"></ul>
+      </div>
+
+      <div class="chart-box">
+        <h3>Para onde vai cada real que você paga</h3>
+        <div class="rosca-wrap">
+          <canvas id="roscaDesembolso"></canvas>
+        </div>
+        <ul class="legenda-rosca" id="legendaDesembolso"></ul>
+        <p class="hint" id="hintDesembolso"></p>
+      </div>
+    </section>
+
+    <!-- ============ ABA EVOLUÇÃO ============ -->
+    <section class="painel-aba" data-painel="evolucao" hidden>
+      <div class="chart-box">
+        <h3>Sua dívida caindo ao longo do tempo</h3>
+        <canvas id="graficoSaldo" height="230"></canvas>
+        <div class="chart-legend">
+          <span class="cru">Só a prestação mínima</span>
+          <span class="estrategico">No seu ritmo</span>
+        </div>
+        <p class="hint" id="hintGraficoSaldo"></p>
+      </div>
+
+      <div class="chart-box">
+        <h3>Para onde vai cada prestação</h3>
+        <canvas id="graficoComposicao" height="230"></canvas>
+        <div class="chart-legend">
+          <span class="cru">Juros (custo do dinheiro)</span>
+          <span class="estrategico">Amortização (abate a dívida)</span>
+        </div>
+        <p class="hint" id="hintGraficoComposicao"></p>
       </div>
 
       <div class="section">
@@ -64,61 +135,20 @@
           <span>Saldo devedor hoje</span>
           <span id="linhaSaldo">—</span>
         </div>
-      </div>
-
-      <!-- Quanto do financiamento já virou seu -->
-      <div class="section">
-        <h3>Quanto da dívida você já quitou</h3>
-        <div class="barra-progresso">
-          <div class="barra-preenchida" id="barraQuitado"></div>
-        </div>
-        <div class="barra-legenda">
-          <span id="barraTextoEsq">—</span>
-          <span id="barraTextoDir">—</span>
-        </div>
-      </div>
-
-      <div class="result-card highlight-good">
-        <div class="label">Sua quitação está prevista para</div>
-        <div class="value" id="valorQuitacao">—</div>
-        <p class="hint" id="hintQuitacao"></p>
-      </div>
-
-      <div class="section">
         <div class="summary-line">
-          <span>Tempo que você já economizou</span>
-          <span class="total" id="linhaTempoEconomizado">—</span>
-        </div>
-        <div class="summary-line">
-          <span>Juros que deixa de pagar</span>
+          <span class="total">Juros que deixa de pagar</span>
           <span class="total" id="linhaEconomiaJuros">R$ 0</span>
         </div>
-        <p class="hint">Comparado a pagar só a prestação mínima até o fim do prazo.</p>
-      </div>
-
-      <div class="chart-box">
-        <h3>Sua dívida caindo ao longo do tempo</h3>
-        <canvas id="graficoSaldo" height="230"></canvas>
-        <div class="chart-legend">
-          <span class="cru">Só a prestação mínima</span>
-          <span class="estrategico">No seu ritmo</span>
-        </div>
-        <p class="hint" id="hintGraficoSaldo"></p>
-      </div>
-
-      <div class="chart-box">
-        <h3>Para onde vai cada prestação</h3>
-        <canvas id="graficoComposicao" height="230"></canvas>
-        <div class="chart-legend">
-          <span class="cru">Juros (custo do dinheiro)</span>
-          <span class="estrategico">Amortização (abate a dívida)</span>
-        </div>
-        <p class="hint" id="hintGraficoComposicao"></p>
       </div>
     </section>
 
-    <!-- ============ ABA MEUS MESES ============ -->
+    <!-- ============ ABA MESES ============ -->
     <section class="painel-aba" data-painel="meses" hidden>
+      <div class="result-card" id="cardProximo">
+        <div class="label" id="labelProximo">Próximo vencimento</div>
+        <div class="value" id="valorProximo">—</div>
+        <p class="hint" id="hintProximo"></p>
+      </div>
       <div class="section">
         <div class="year-nav">
           <button type="button" class="btn btn-secondary" id="btn-ano-anterior">◀</button>

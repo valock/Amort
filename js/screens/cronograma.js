@@ -16,12 +16,21 @@ import {
 } from "../calc/cronograma.js";
 import { rotuloMes, mesCalendario, mesContratoHoje, mesContratoDe } from "../calc/calendario.js";
 import { lerCasoDoHash, limparHash } from "../compartilhar.js";
-import { criarGraficoSaldoControle, criarGraficoComposicao, padSerie } from "../charts.js";
+import {
+  criarGraficoSaldoControle,
+  criarGraficoComposicao,
+  criarGraficoRosca,
+  padSerie,
+  SERIES,
+} from "../charts.js";
+import { saudeDoContrato } from "../calc/saude.js";
+import { composicaoDoImovel, composicaoDoDesembolso } from "../calc/composicao.js";
 import { planilhaParaCSV, baixarCSV, nomeArquivoPlanilha } from "../csv.js";
 
 let cliente = null;
 let anoVisivel = null;
-let graficos = [];
+let graficosLinha = [];
+let graficosRosca = [];
 let planilhaRenderizada = false;
 
 async function iniciar() {
@@ -97,6 +106,10 @@ function configurarAbas() {
       // A planilha tem centenas de linhas: só monta quando o cliente abre
       // a aba, para a tela não demorar a aparecer.
       if (btn.dataset.aba === "planilha" && !planilhaRenderizada) renderPlanilha();
+      // Chart.js mede o canvas ao criar; num painel oculto a medida sai zero,
+      // então os gráficos de cada aba são criados quando ela aparece.
+      if (btn.dataset.aba === "evolucao") renderGraficosEvolucao();
+      if (btn.dataset.aba === "painel") renderRoscas();
     });
   });
 }
@@ -107,10 +120,17 @@ async function persistir() {
 
 function renderTudo() {
   renderResumo();
+  renderSaude();
   renderMeses();
-  renderGraficos();
-  // Se a planilha já estava montada, refaz para refletir o novo registro
+  // Só redesenha os gráficos da aba que está à vista; nas ocultas o canvas
+  // mede zero e o Chart.js desenharia torto.
+  if (abaVisivel() === "painel") renderRoscas();
+  if (abaVisivel() === "evolucao") renderGraficosEvolucao();
   if (planilhaRenderizada) renderPlanilha();
+}
+
+function abaVisivel() {
+  return document.querySelector(".tab.ativa")?.dataset.aba || "painel";
 }
 
 // ---------------------------------------------------------------- Resumo
@@ -160,18 +180,194 @@ function renderResumo() {
   setTexto("linhaSaldo", textoSaldo);
 
   renderBarraQuitado(resumo);
+  renderHero(resumo);
+  renderKpis(resumo);
 
+  setTexto("linhaEconomiaJuros", fmtMoeda(resumo.economiaJurosAtual));
+}
+
+// O número-herói é único na tela: a data em que o cliente fica livre da dívida.
+function renderHero(resumo) {
+  const ac = cliente.acompanhamento;
   if (resumo.quitacaoMesContrato) {
-    setTexto("valorQuitacao", rotuloMes(ac.dataBaseISO, resumo.quitacaoMesContrato, { comAnoCompleto: true }));
-    document.getElementById("hintQuitacao").textContent = `Em ${fmtPrazo(
-      resumo.prazoAtual
-    )} de financiamento, no lugar de ${fmtPrazo(resumo.prazoSemAportes)}.`;
+    setTexto(
+      "heroQuitacao",
+      rotuloMes(ac.dataBaseISO, resumo.quitacaoMesContrato, { comAnoCompleto: true })
+    );
+    setTexto(
+      "heroDetalhe",
+      `Em ${fmtPrazo(resumo.prazoAtual)} de financiamento, no lugar dos ${fmtPrazo(
+        resumo.prazoSemAportes
+      )} contratados.`
+    );
   } else {
-    setTexto("valorQuitacao", "—");
+    setTexto("heroQuitacao", "—");
+    setTexto("heroDetalhe", "Defina a entrega das chaves para projetar a quitação.");
+  }
+}
+
+function renderKpis(resumo) {
+  const ac = cliente.acompanhamento;
+  const prox = resumo.proximoVencimento;
+
+  const tiles = [
+    {
+      label: resumo.mesesEmAtraso > 0 ? "Em aberto agora" : "Próximo vencimento",
+      valor:
+        resumo.mesesEmAtraso > 0
+          ? fmtMoeda(resumo.valorEmAtraso)
+          : prox
+          ? fmtMoeda(prox.totalPrevisto)
+          : "—",
+    },
+    {
+      label: prox && resumo.mesesEmAtraso === 0 ? "Vence em" : "Compromissos vencidos",
+      valor:
+        resumo.mesesEmAtraso > 0
+          ? `${resumo.mesesEmAtraso} ${resumo.mesesEmAtraso === 1 ? "mês" : "meses"}`
+          : prox
+          ? rotuloMes(ac.dataBaseISO, prox.mesContrato, { comAnoCompleto: true })
+          : "—",
+    },
+    { label: "Tempo que você já economizou", valor: fmtPrazo(resumo.mesesEconomizados) },
+    { label: "Juros que deixa de pagar", valor: fmtMoedaCurta(resumo.economiaJurosAtual) },
+  ];
+
+  const row = document.getElementById("kpiRow");
+  row.innerHTML = "";
+  for (const t of tiles) {
+    const div = document.createElement("div");
+    div.className = "kpi";
+    const l = document.createElement("div");
+    l.className = "kpi-label";
+    l.textContent = t.label;
+    const v = document.createElement("div");
+    v.className = "kpi-valor";
+    v.textContent = t.valor;
+    div.appendChild(l);
+    div.appendChild(v);
+    row.appendChild(div);
+  }
+}
+
+// ---------------------------------------------------------------- Saúde
+
+const ICONE_STATUS = { bom: "✓", atencao: "!", critico: "✕", neutro: "–" };
+
+function renderSaude() {
+  const saude = saudeDoContrato(cliente);
+
+  const card = document.getElementById("saudeCard");
+  card.classList.remove("bom", "atencao", "critico", "neutro");
+  card.classList.add(saude.geral);
+
+  setTexto("saudeIcone", ICONE_STATUS[saude.geral]);
+  setTexto(
+    "saudeTitulo",
+    saude.geral === "bom"
+      ? "Contrato saudável"
+      : saude.geral === "atencao"
+      ? "Atenção"
+      : saude.geral === "critico"
+      ? "Precisa de atenção"
+      : "Saúde do contrato"
+  );
+  setTexto("saudeMsg", saude.mensagem);
+
+  const lista = document.getElementById("indicadores");
+  lista.innerHTML = "";
+  for (const ind of saude.indicadores) {
+    const linha = document.createElement("div");
+    linha.className = `indicador ${ind.status}`;
+    linha.title = ind.detalhe;
+
+    const icone = document.createElement("span");
+    icone.className = "indicador-icone";
+    icone.textContent = ICONE_STATUS[ind.status];
+
+    const titulo = document.createElement("span");
+    titulo.className = "indicador-titulo";
+    titulo.textContent = ind.titulo;
+
+    const rotulo = document.createElement("span");
+    rotulo.className = "indicador-rotulo";
+    rotulo.textContent = ind.rotulo;
+
+    linha.appendChild(icone);
+    linha.appendChild(titulo);
+    linha.appendChild(rotulo);
+    lista.appendChild(linha);
+  }
+}
+
+// ---------------------------------------------------------------- Roscas
+
+function renderRoscas() {
+  graficosRosca.forEach((g) => g.destroy());
+  graficosRosca = [];
+
+  const imovel = composicaoDoImovel(cliente);
+  if (imovel.total > 0) {
+    graficosRosca.push(
+      criarGraficoRosca("roscaImovel", {
+        fatias: imovel.fatias,
+        formatador: fmtMoeda,
+        tituloCentro: imovel.rotuloCentro,
+        valorCentro: fmtMoedaCurta(imovel.total),
+      })
+    );
+    renderLegendaRosca("legendaImovel", imovel.fatias, imovel.total);
   }
 
-  setTexto("linhaTempoEconomizado", fmtPrazo(resumo.mesesEconomizados));
-  setTexto("linhaEconomiaJuros", fmtMoeda(resumo.economiaJurosAtual));
+  const desembolso = composicaoDoDesembolso(cliente);
+  if (desembolso.total > 0) {
+    graficosRosca.push(
+      criarGraficoRosca("roscaDesembolso", {
+        fatias: desembolso.fatias,
+        formatador: fmtMoeda,
+        tituloCentro: desembolso.rotuloCentro,
+        valorCentro: fmtMoedaCurta(desembolso.total),
+      })
+    );
+    renderLegendaRosca("legendaDesembolso", desembolso.fatias, desembolso.total);
+
+    const reaisDeCustoPorCem = Math.round(desembolso.proporcaoCusto * 100);
+    document.getElementById("hintDesembolso").textContent =
+      `De cada R$ 100 que você desembolsa, R$ ${reaisDeCustoPorCem} são custo ` +
+      `(juros, seguros e correção) e não viram patrimônio. ` +
+      `Adiantar parcelas é o que reduz essa fatia.`;
+  }
+}
+
+// A legenda em HTML garante que a identidade das fatias não dependa só da cor.
+function renderLegendaRosca(containerId, fatias, total) {
+  const ul = document.getElementById(containerId);
+  ul.innerHTML = "";
+  fatias.forEach((f, i) => {
+    const li = document.createElement("li");
+
+    const marca = document.createElement("span");
+    marca.className = "marca";
+    marca.style.background = SERIES[i % SERIES.length];
+
+    const rot = document.createElement("span");
+    rot.className = "rot";
+    rot.textContent = f.rotulo;
+
+    const val = document.createElement("span");
+    val.className = "val";
+    val.textContent = fmtMoedaCurta(f.valor);
+
+    const pct = document.createElement("span");
+    pct.className = "pct";
+    pct.textContent = fmtPct(total ? f.valor / total : 0, 0);
+
+    li.appendChild(marca);
+    li.appendChild(rot);
+    li.appendChild(val);
+    li.appendChild(pct);
+    ul.appendChild(li);
+  });
 }
 
 function renderBarraQuitado(resumo) {
@@ -195,9 +391,9 @@ function renderBarraQuitado(resumo) {
 
 // ---------------------------------------------------------------- Gráficos
 
-function renderGraficos() {
-  graficos.forEach((g) => g.destroy());
-  graficos = [];
+function renderGraficosEvolucao() {
+  graficosLinha.forEach((g) => g.destroy());
+  graficosLinha = [];
 
   const ac = cliente.acompanhamento;
   const s = seriesControle(cliente);
@@ -210,7 +406,7 @@ function renderGraficos() {
   );
   const tooltipData = (i) => rotuloMes(ac.dataBaseISO, chaves + i, { comAnoCompleto: true });
 
-  graficos.push(
+  graficosLinha.push(
     criarGraficoSaldoControle("graficoSaldo", {
       labels,
       minimo: padSerie(s.saldoMinimo, s.tamanho),
@@ -227,7 +423,7 @@ function renderGraficos() {
       : "Registre aportes para ver a linha verde se descolar da vermelha.";
 
   // A composição só faz sentido no trecho em que há parcela para decompor
-  graficos.push(
+  graficosLinha.push(
     criarGraficoComposicao("graficoComposicao", {
       labels: labels.slice(0, s.prazoAtual),
       juros: s.juros,

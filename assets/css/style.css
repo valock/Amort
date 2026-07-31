@@ -569,3 +569,155 @@ table.planilha tfoot td {
   font-weight: 800;
   border-top: 2px solid var(--border);
 }
+
+/* ---- Dashboard do cliente ---- */
+
+:root {
+  /* Paleta categórica validada contra a superfície --surface (#1c2b4a).
+     Ordem fixa; ver comentário em js/charts.js antes de trocar. */
+  --serie-1: #3987e5;
+  --serie-2: #d95926;
+  --serie-3: #199e70;
+  --serie-4: #c98500;
+
+  /* Status: sempre acompanhados de ícone e texto, nunca cor sozinha.
+     O crítico é um passo mais claro que o de referência para passar 3:1
+     nesta superfície. */
+  --status-bom: #0ca30c;
+  --status-atencao: #fab219;
+  --status-critico: #eb5757;
+}
+
+/* Número-herói: exatamente um por tela */
+.hero {
+  text-align: center;
+  padding: 26px 20px;
+  margin-bottom: var(--gap);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.hero-label {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+.hero-valor {
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--good);
+  /* proporcional de propósito: tabular-nums deixa número grande solto */
+}
+.hero-detalhe {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  margin-top: 10px;
+}
+
+/* KPI row */
+.kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: var(--gap);
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.kpi-label {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  line-height: 1.25;
+}
+.kpi-valor {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* Saúde do contrato */
+.saude-card {
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: var(--gap);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--border);
+  background: var(--surface);
+}
+.saude-card.bom { border-left-color: var(--status-bom); }
+.saude-card.atencao { border-left-color: var(--status-atencao); }
+.saude-card.critico { border-left-color: var(--status-critico); }
+
+.saude-topo {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.saude-icone { font-size: 1.7rem; line-height: 1; }
+.saude-titulo { font-size: 1.15rem; font-weight: 800; }
+.saude-msg { font-size: 0.95rem; color: var(--text-dim); margin-top: 3px; }
+
+.indicadores {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 16px;
+}
+.indicador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+.indicador-icone { flex: 0 0 auto; font-size: 1rem; width: 20px; text-align: center; }
+.indicador-titulo { flex: 0 0 auto; color: var(--text-dim); min-width: 96px; }
+.indicador-rotulo { flex: 1; font-weight: 700; text-align: right; }
+.indicador.bom .indicador-rotulo { color: var(--status-bom); }
+.indicador.atencao .indicador-rotulo { color: var(--status-atencao); }
+.indicador.critico .indicador-rotulo { color: var(--status-critico); }
+.indicador.neutro .indicador-rotulo { color: var(--text-dim); font-weight: 500; }
+
+/* Rosca + legenda em HTML (identidade nunca só por cor) */
+.rosca-wrap {
+  max-width: 260px;
+  margin: 4px auto 6px;
+}
+.legenda-rosca {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.legenda-rosca li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.93rem;
+}
+.legenda-rosca .marca {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.legenda-rosca .rot { flex: 1; color: var(--text-dim); }
+.legenda-rosca .val { font-weight: 700; white-space: nowrap; }
+.legenda-rosca .pct {
+  flex: 0 0 auto;
+  min-width: 46px;
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

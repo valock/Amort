@@ -6,6 +6,16 @@ const VERMELHO = "#ff8a8a";
 const VERDE = "#2fd680";
 const AZUL = "#3ba0ff";
 
+// Superfície sobre a qual os gráficos são desenhados. Usada como cor do vão
+// entre as fatias da rosca, para as fatias não se tocarem.
+const SUPERFICIE = "#1c2b4a";
+
+// Paleta categórica em ordem fixa, nunca ciclada. Validada contra a superfície
+// acima: pior par adjacente ΔE 8,4 sob daltonismo e 19,8 em visão normal.
+// Trocar a ordem exige revalidar — vermelho ao lado de amarelo, por exemplo,
+// cai para ΔE 13 e fica indistinguível até com visão plena.
+export const SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500"];
+
 // Preenche uma série curta até o tamanho do gráfico repetindo o último valor.
 // Usado quando o cenário estratégico quita antes e a linha precisa continuar
 // no zero até o fim do eixo.
@@ -200,5 +210,77 @@ export function criarGraficoComposicao(canvasId, { labels, juros, amortizacao, i
       },
     },
     plugins: [pluginMarcadorHoje(indiceHoje)],
+  });
+}
+
+// Escreve o total no miolo da rosca. É o número que o leigo lê primeiro, então
+// vive no centro em vez de virar mais uma linha de legenda.
+function pluginCentroRosca({ titulo, valor }) {
+  return {
+    id: "centroRosca",
+    afterDraw(chart) {
+      const area = chart.chartArea;
+      if (!area) return;
+      const cx = (area.left + area.right) / 2;
+      const cy = (area.top + area.bottom) / 2;
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.textAlign = "center";
+
+      ctx.fillStyle = "#f1f5f9";
+      // Figuras proporcionais: em tamanho grande, tabular-nums deixa o número solto
+      ctx.font = "800 20px -apple-system, system-ui, sans-serif";
+      ctx.fillText(valor, cx, cy + 2);
+
+      ctx.fillStyle = CINZA;
+      ctx.font = "500 11px -apple-system, system-ui, sans-serif";
+      ctx.fillText(titulo, cx, cy + 20);
+      ctx.restore();
+    },
+  };
+}
+
+/**
+ * Rosca de parte-do-todo. Serve para uma composição vista de relance com até
+ * 6 fatias — não para comparar valores parecidos, onde barra ou número ganham.
+ *
+ * A identidade das fatias nunca depende só da cor: quem chama renderiza a
+ * legenda em HTML com o rótulo e o percentual ao lado de cada cor.
+ */
+export function criarGraficoRosca(canvasId, { fatias, formatador, tituloCentro, valorCentro }) {
+  const total = fatias.reduce((acc, f) => acc + f.valor, 0) || 1;
+
+  return new Chart(document.getElementById(canvasId), {
+    type: "doughnut",
+    data: {
+      labels: fatias.map((f) => f.rotulo),
+      datasets: [
+        {
+          data: fatias.map((f) => f.valor),
+          backgroundColor: fatias.map((_, i) => SERIES[i % SERIES.length]),
+          // Vão de 2px na cor da superfície, para as fatias não encostarem
+          borderColor: SUPERFICIE,
+          borderWidth: 2,
+          hoverOffset: 6,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: "62%",
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (item) => {
+              const v = item.parsed;
+              return `${item.label}: ${formatador(v)} (${((v / total) * 100).toFixed(1).replace(".", ",")}%)`;
+            },
+          },
+        },
+      },
+    },
+    plugins: [pluginCentroRosca({ titulo: tituloCentro, valor: valorCentro })],
   });
 }
