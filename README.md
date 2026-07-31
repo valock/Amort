@@ -1,5 +1,7 @@
 # Acelerador de Quitação
 
+**No ar:** <https://planilha.marcotulio.pro>
+
 Ferramenta offline do corretor para a mesa de negociação MCMV. Parte da
 **simulação de aprovação da Caixa** que o correspondente envia e monta o
 argumento completo para o cliente: o que o banco aprovou, como fechar a
@@ -46,10 +48,21 @@ acúmulo de FGTS sem rendimento do fundo).
 ## Rodando os testes
 
 ```
-cd testes
-node caso-caixa-real.mjs
-node motor-amortizacao.mjs
+node testes/caso-caixa-real.mjs         # trava os números do documento oficial
+node testes/motor-amortizacao.mjs       # SAC/Price, FGTS, 13º, INCC, juros de obra
+node testes/verificar-anonimizacao.mjs  # varre o repo por dado pessoal
 ```
+
+## Quer ajudar?
+
+Leia o **[CONTRIBUTING.md](CONTRIBUTING.md)**. Ele traz o glossário do domínio
+(dá para contribuir sem entender nada de financiamento imobiliário), o mapa da
+arquitetura, os invariantes de cálculo que não podem ser quebrados e as
+convenções do projeto.
+
+Duas regras valem desde já: **nenhum dado real de cliente entra no
+repositório** (ele é público) e **o app não faz nenhuma chamada de rede** — os
+dados do corretor ficam só no navegador dele.
 
 ## Stack
 Site estático — HTML/CSS/JS em módulos ES, sem build. `assets/vendor/` traz o
@@ -63,5 +76,5 @@ python3 -m http.server 8000
 e abra `http://localhost:8000/index.html`.
 
 ## Deploy
-Publicado no **Netlify** a partir da branch principal (o `netlify.toml`
-publica a raiz do repositório).
+Netlify publica a raiz da branch principal automaticamente a cada push (o `netlify.toml`
+define isso). Produção: <https://planilha.marcotulio.pro>
