@@ -5,15 +5,24 @@ import {
   idClienteDaURL,
   normalizarCliente,
 } from "../state.js";
-import { fmtMoeda, fmtPrazo, parseNum, paraInput } from "../format.js";
+import { fmtMoeda, fmtMoedaCurta, fmtPrazo, fmtPct, parseNum, paraInput } from "../format.js";
 import { renderStepper } from "../nav.js";
 import { setTexto } from "../ui.js";
-import { construirCronograma, resumoControle } from "../calc/cronograma.js";
+import {
+  construirCronograma,
+  resumoControle,
+  planilhaCaixa,
+  seriesControle,
+} from "../calc/cronograma.js";
 import { rotuloMes, mesCalendario, mesContratoHoje, mesContratoDe } from "../calc/calendario.js";
 import { lerCasoDoHash, limparHash } from "../compartilhar.js";
+import { criarGraficoSaldoControle, criarGraficoComposicao, padSerie } from "../charts.js";
+import { planilhaParaCSV, baixarCSV, nomeArquivoPlanilha } from "../csv.js";
 
 let cliente = null;
 let anoVisivel = null;
+let graficos = [];
+let planilhaRenderizada = false;
 
 async function iniciar() {
   // Caso recebido por link do corretor: importa para este aparelho e assume
@@ -51,35 +60,65 @@ async function iniciar() {
   const calHoje = mesCalendario(ac.dataBaseISO, Math.max(1, hojeMes));
   anoVisivel = calHoje ? calHoje.ano : mesCalendario(ac.dataBaseISO, 1).ano;
 
+  configurarAbas();
+
   document.getElementById("btn-ano-anterior").addEventListener("click", () => {
     anoVisivel--;
-    render();
+    renderMeses();
   });
   document.getElementById("btn-ano-proximo").addEventListener("click", () => {
     anoVisivel++;
-    render();
+    renderMeses();
   });
   document.getElementById("btn-ir-hoje").addEventListener("click", () => {
     const c = mesCalendario(ac.dataBaseISO, Math.max(1, mesContratoHoje(ac.dataBaseISO)));
     if (c) {
       anoVisivel = c.ano;
-      render();
+      renderMeses();
     }
   });
 
-  render();
+  document.getElementById("btn-csv").addEventListener("click", () => {
+    const planilha = planilhaCaixa(cliente);
+    baixarCSV(nomeArquivoPlanilha(cliente), planilhaParaCSV(cliente, planilha));
+  });
+
+  renderTudo();
+}
+
+function configurarAbas() {
+  const botoes = document.querySelectorAll(".tab");
+  botoes.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      botoes.forEach((b) => b.classList.toggle("ativa", b === btn));
+      document.querySelectorAll(".painel-aba").forEach((p) => {
+        p.hidden = p.dataset.painel !== btn.dataset.aba;
+      });
+      // A planilha tem centenas de linhas: só monta quando o cliente abre
+      // a aba, para a tela não demorar a aparecer.
+      if (btn.dataset.aba === "planilha" && !planilhaRenderizada) renderPlanilha();
+    });
+  });
 }
 
 async function persistir() {
   await salvarCliente(cliente);
 }
 
-function render() {
+function renderTudo() {
+  renderResumo();
+  renderMeses();
+  renderGraficos();
+  // Se a planilha já estava montada, refaz para refletir o novo registro
+  if (planilhaRenderizada) renderPlanilha();
+}
+
+// ---------------------------------------------------------------- Resumo
+
+function renderResumo() {
   const ac = cliente.acompanhamento;
-  const { linhas } = construirCronograma(cliente);
   const resumo = resumoControle(cliente);
 
-  // ---- Painel ----
   const prox = resumo.proximoVencimento;
   if (resumo.mesesEmAtraso > 0) {
     document.getElementById("labelProximo").textContent =
@@ -111,6 +150,7 @@ function render() {
   document.getElementById("linhaAtrasoWrap").style.display =
     resumo.valorEmAtraso > 0 ? "flex" : "none";
   setTexto("linhaAportes", fmtMoeda(resumo.totalAportesRegistrados));
+
   // O financiamento só passa a ter saldo depois das chaves; antes disso o
   // dinheiro está indo para a construtora, não amortizando dívida.
   let textoSaldo;
@@ -118,6 +158,8 @@ function render() {
   else if (resumo.mesContratoHoje <= 0) textoSaldo = "contrato não começou";
   else textoSaldo = "só após as chaves";
   setTexto("linhaSaldo", textoSaldo);
+
+  renderBarraQuitado(resumo);
 
   if (resumo.quitacaoMesContrato) {
     setTexto("valorQuitacao", rotuloMes(ac.dataBaseISO, resumo.quitacaoMesContrato, { comAnoCompleto: true }));
@@ -130,8 +172,167 @@ function render() {
 
   setTexto("linhaTempoEconomizado", fmtPrazo(resumo.mesesEconomizados));
   setTexto("linhaEconomiaJuros", fmtMoeda(resumo.economiaJurosAtual));
+}
 
-  // ---- Lista de meses do ano visível ----
+function renderBarraQuitado(resumo) {
+  const financiado = cliente.aprovacao.valorFinanciamento || 0;
+  const saldo = resumo.saldoDevedorAtual;
+  const barra = document.getElementById("barraQuitado");
+
+  if (saldo === null || !financiado) {
+    barra.style.width = "0%";
+    setTexto("barraTextoEsq", "A amortização começa quando você pega as chaves.");
+    setTexto("barraTextoDir", "");
+    return;
+  }
+
+  const quitado = financiado - saldo;
+  const pct = Math.max(0, Math.min(1, quitado / financiado));
+  barra.style.width = `${(pct * 100).toFixed(1)}%`;
+  setTexto("barraTextoEsq", `${fmtPct(pct, 1)} quitado (${fmtMoedaCurta(quitado)})`);
+  setTexto("barraTextoDir", `falta ${fmtMoedaCurta(saldo)}`);
+}
+
+// ---------------------------------------------------------------- Gráficos
+
+function renderGraficos() {
+  graficos.forEach((g) => g.destroy());
+  graficos = [];
+
+  const ac = cliente.acompanhamento;
+  const s = seriesControle(cliente);
+  if (!s.tamanho) return;
+
+  const chaves = ac.mesEntregaChaves;
+  // Eixo em datas reais: o cliente pensa em "mar/2032", não em "mês 68"
+  const labels = Array.from({ length: s.tamanho }, (_, i) =>
+    rotuloMes(ac.dataBaseISO, chaves + i)
+  );
+  const tooltipData = (i) => rotuloMes(ac.dataBaseISO, chaves + i, { comAnoCompleto: true });
+
+  graficos.push(
+    criarGraficoSaldoControle("graficoSaldo", {
+      labels,
+      minimo: padSerie(s.saldoMinimo, s.tamanho),
+      atual: padSerie(s.saldoAtual, s.tamanho),
+      indiceHoje: s.indiceHoje,
+      formatadorEixoY: (v) => fmtMoedaCurta(v),
+      formatadorTooltip: tooltipData,
+    })
+  );
+
+  document.getElementById("hintGraficoSaldo").textContent =
+    s.prazoAtual < s.prazoMinimo
+      ? `A linha verde chega ao zero ${fmtPrazo(s.prazoMinimo - s.prazoAtual)} antes da vermelha.`
+      : "Registre aportes para ver a linha verde se descolar da vermelha.";
+
+  // A composição só faz sentido no trecho em que há parcela para decompor
+  graficos.push(
+    criarGraficoComposicao("graficoComposicao", {
+      labels: labels.slice(0, s.prazoAtual),
+      juros: s.juros,
+      amortizacao: s.amortizacao,
+      indiceHoje: s.indiceHoje !== null && s.indiceHoje < s.prazoAtual ? s.indiceHoje : null,
+      formatadorEixoY: (v) => fmtMoedaCurta(v),
+      formatadorTooltip: tooltipData,
+    })
+  );
+
+  const primeiroJuros = s.juros[0] || 0;
+  const primeiraAmort = s.amortizacao[0] || 0;
+  const somaPrimeira = primeiroJuros + primeiraAmort;
+  document.getElementById("hintGraficoComposicao").textContent = somaPrimeira
+    ? `Na 1ª prestação, ${fmtPct(primeiroJuros / somaPrimeira, 0)} vai para juros. ` +
+      `Cada aporte extra abate direto a dívida, sem passar por juros.`
+    : "";
+}
+
+// ---------------------------------------------------------------- Planilha
+
+function renderPlanilha() {
+  const ac = cliente.acompanhamento;
+  const planilha = planilhaCaixa(cliente);
+  const t = planilha.totais;
+
+  setTexto("planilhaSistema", cliente.aprovacao.sistema === "SAC" ? "SAC" : "Price");
+  setTexto(
+    "planilhaQtd",
+    `${planilha.linhas.length} de ${cliente.aprovacao.prazoMeses} contratadas`
+  );
+  setTexto("planilhaJuros", fmtMoeda(t.juros));
+  setTexto("planilhaSeguros", fmtMoeda(t.seguros));
+  setTexto("planilhaDesembolso", fmtMoeda(t.desembolso));
+
+  const tabela = document.getElementById("tabelaPlanilha");
+  const corpo = tabela.querySelector("tbody");
+  corpo.innerHTML = "";
+
+  const frag = document.createDocumentFragment();
+  for (const l of planilha.linhas) {
+    const tr = document.createElement("tr");
+    if (l.ehHoje) tr.className = "mes-atual";
+    else if (l.aporte > 0) tr.className = "tem-aporte";
+    if (l.pago) tr.classList.add("pago");
+
+    const celulas = [
+      { texto: String(l.n) },
+      { texto: rotuloMes(ac.dataBaseISO, l.mesContrato) },
+      { texto: fmtMoeda(l.prestacao) },
+      { texto: fmtMoeda(l.juros) },
+      { texto: fmtMoeda(l.amortizacao) },
+      { texto: fmtMoeda(l.seguros) },
+      { texto: l.aporte > 0 ? fmtMoeda(l.aporte) : "—", classe: l.aporte > 0 ? "aporte-feito" : "" },
+      { texto: fmtMoeda(l.saldo), classe: "saldo" },
+    ];
+    for (const c of celulas) {
+      const td = document.createElement("td");
+      td.textContent = c.texto;
+      if (c.classe) td.className = c.classe;
+      tr.appendChild(td);
+    }
+    frag.appendChild(tr);
+  }
+  corpo.appendChild(frag);
+
+  // Rodapé com os totais, fixo na base da área rolável
+  tabela.querySelector("tfoot")?.remove();
+  const tfoot = document.createElement("tfoot");
+  const trTotal = document.createElement("tr");
+  for (const texto of [
+    "",
+    "Total",
+    fmtMoeda(t.prestacoes),
+    fmtMoeda(t.juros),
+    fmtMoeda(t.amortizacao),
+    fmtMoeda(t.seguros),
+    fmtMoeda(t.aportes),
+    fmtMoeda(0),
+  ]) {
+    const td = document.createElement("td");
+    td.textContent = texto;
+    trTotal.appendChild(td);
+  }
+  tfoot.appendChild(trTotal);
+  tabela.appendChild(tfoot);
+
+  document.getElementById("notaPlanilha").textContent =
+    `A amortização somada (${fmtMoeda(t.amortizacao)}) mais os aportes (${fmtMoeda(t.aportes)}) ` +
+    `zeram o financiamento de ${fmtMoeda(cliente.aprovacao.valorFinanciamento)}. ` +
+    `Seguros e tarifas são estimados a partir da 1ª prestação da simulação da Caixa.`;
+
+  planilhaRenderizada = true;
+
+  // Deixa o mês atual visível de saída, em vez de abrir na primeira parcela
+  const atual = corpo.querySelector("tr.mes-atual");
+  if (atual) atual.scrollIntoView({ block: "center" });
+}
+
+// ---------------------------------------------------------------- Meses
+
+function renderMeses() {
+  const ac = cliente.acompanhamento;
+  const { linhas } = construirCronograma(cliente);
+
   const primeiroMesDoAno = mesContratoDe(ac.dataBaseISO, anoVisivel, 1);
   const ultimoMesDoAno = mesContratoDe(ac.dataBaseISO, anoVisivel, 12);
   const doAno = linhas.filter(
@@ -152,10 +353,7 @@ function render() {
   }
 
   const hojeMes = mesContratoHoje(ac.dataBaseISO);
-
-  for (const linha of doAno) {
-    container.appendChild(cartaoDoMes(linha, hojeMes));
-  }
+  for (const linha of doAno) container.appendChild(cartaoDoMes(linha, hojeMes));
 }
 
 function cartaoDoMes(linha, hojeMes) {
@@ -166,7 +364,6 @@ function cartaoDoMes(linha, hojeMes) {
   else if (hojeMes > 0 && linha.mesContrato <= hojeMes) card.classList.add("atrasado");
   if (linha.mesContrato === hojeMes) card.classList.add("atual");
 
-  // Cabeçalho: data + total do mês
   const topo = document.createElement("div");
   topo.className = "mes-topo";
 
@@ -189,7 +386,6 @@ function cartaoDoMes(linha, hojeMes) {
   topo.appendChild(valor);
   card.appendChild(topo);
 
-  // Detalhe dos compromissos quando há mais de um
   if (linha.compromissos.length > 1) {
     for (const c of linha.compromissos) {
       const det = document.createElement("div");
@@ -201,10 +397,8 @@ function cartaoDoMes(linha, hojeMes) {
     }
   }
 
-  // Botão de pago
   const acoes = document.createElement("div");
   acoes.className = "mes-acoes";
-
   const btnPago = document.createElement("button");
   btnPago.type = "button";
   btnPago.className = "btn-pago" + (linha.pago ? " ativo" : "");
@@ -221,63 +415,51 @@ function cartaoDoMes(linha, hojeMes) {
       ac.meses[chave] = { ...atual, pago: true };
     }
     await persistir();
-    render();
+    renderTudo();
   });
   acoes.appendChild(btnPago);
   card.appendChild(acoes);
 
   // Valor realmente pago (o INCC é estimativa, o boleto real difere)
   if (linha.pago) {
-    const campoValor = document.createElement("div");
-    campoValor.className = "mes-campo";
-    const rot = document.createElement("label");
-    rot.textContent = "Valor que você pagou (opcional)";
-    const inp = document.createElement("input");
-    inp.type = "text";
-    inp.inputMode = "decimal";
-    inp.placeholder = fmtMoeda(linha.totalPrevisto);
-    inp.value = linha.valorPago ? paraInput(linha.valorPago) : "";
-    inp.addEventListener("change", async () => {
-      const chave = String(linha.mesContrato);
-      const v = parseNum(inp.value);
-      ac.meses[chave] = { ...(ac.meses[chave] || {}), pago: true, valorPago: v || null };
-      await persistir();
-      render();
-    });
-    campoValor.appendChild(rot);
-    campoValor.appendChild(inp);
-    card.appendChild(campoValor);
+    card.appendChild(
+      campoNumerico({
+        rotulo: "Valor que você pagou (opcional)",
+        placeholder: fmtMoeda(linha.totalPrevisto),
+        valor: linha.valorPago,
+        aoConfirmar: async (v) => {
+          const chave = String(linha.mesContrato);
+          ac.meses[chave] = { ...(ac.meses[chave] || {}), pago: true, valorPago: v || null };
+          await persistir();
+          renderTudo();
+        },
+      })
+    );
   }
 
   // Aporte extra só faz sentido depois das chaves, quando há saldo a amortizar
   if (linha.fase === "pos-chaves") {
-    const campoAporte = document.createElement("div");
-    campoAporte.className = "mes-campo";
-    const rot = document.createElement("label");
-    rot.textContent = linha.aportePlanejado
-      ? `Aporte extra — o plano previa ${fmtMoeda(linha.aportePlanejado)}`
-      : "Aporte extra neste mês";
-    const inp = document.createElement("input");
-    inp.type = "text";
-    inp.inputMode = "decimal";
-    inp.placeholder = "0,00";
-    inp.value = linha.aporteRegistrado ? paraInput(linha.aporteRegistrado) : "";
-    inp.addEventListener("change", async () => {
-      const chave = String(linha.mesContrato);
-      const v = parseNum(inp.value);
-      const atual = ac.meses[chave] || {};
-      if (v > 0) ac.meses[chave] = { ...atual, aporte: v };
-      else {
-        delete atual.aporte;
-        if (!atual.pago) delete ac.meses[chave];
-        else ac.meses[chave] = atual;
-      }
-      await persistir();
-      render();
-    });
-    campoAporte.appendChild(rot);
-    campoAporte.appendChild(inp);
-    card.appendChild(campoAporte);
+    card.appendChild(
+      campoNumerico({
+        rotulo: linha.aportePlanejado
+          ? `Aporte extra — o plano previa ${fmtMoeda(linha.aportePlanejado)}`
+          : "Aporte extra neste mês",
+        placeholder: "0,00",
+        valor: linha.aporteRegistrado,
+        aoConfirmar: async (v) => {
+          const chave = String(linha.mesContrato);
+          const atual = ac.meses[chave] || {};
+          if (v > 0) ac.meses[chave] = { ...atual, aporte: v };
+          else {
+            delete atual.aporte;
+            if (!atual.pago) delete ac.meses[chave];
+            else ac.meses[chave] = atual;
+          }
+          await persistir();
+          renderTudo();
+        },
+      })
+    );
   }
 
   if (linha.saldoDevedor !== null) {
@@ -288,6 +470,22 @@ function cartaoDoMes(linha, hojeMes) {
   }
 
   return card;
+}
+
+function campoNumerico({ rotulo, placeholder, valor, aoConfirmar }) {
+  const wrap = document.createElement("div");
+  wrap.className = "mes-campo";
+  const rot = document.createElement("label");
+  rot.textContent = rotulo;
+  const inp = document.createElement("input");
+  inp.type = "text";
+  inp.inputMode = "decimal";
+  inp.placeholder = placeholder;
+  inp.value = valor ? paraInput(valor) : "";
+  inp.addEventListener("change", () => aoConfirmar(parseNum(inp.value)));
+  wrap.appendChild(rot);
+  wrap.appendChild(inp);
+  return wrap;
 }
 
 iniciar();

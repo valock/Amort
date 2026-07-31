@@ -23,12 +23,21 @@ Cada cliente é um caso salvo só no dispositivo — nada é enviado a servidore
    avulsos, todos abatendo o **prazo** e não a parcela.
 4. **O resultado** — economia de juros, tempo poupado, seguros evitados e dois
    gráficos comparando o cenário sem amortizar com o estratégico.
-5. **O controle mês a mês** — o cronograma com datas reais, encadeando as
-   parcelas da construtora e a prestação da Caixa pela entrega das chaves. O
-   cliente marca o que pagou, registra os aportes que realmente fez, e vê o
-   saldo devedor e a data de quitação se moverem conforme cumpre (ou não) o
-   plano. O corretor entrega essa tela por um link — o caso vai codificado
-   dentro do próprio link e é importado no aparelho do cliente, sem servidor.
+5. **O controle mês a mês** — a tela do cliente, em três abas:
+   - *Resumo*: onde ele está, quanto da dívida já quitou, quando quita, e dois
+     gráficos — a dívida caindo no ritmo dele contra o ritmo mínimo (com o mês
+     atual marcado), e para onde vai cada prestação (juros vs amortização).
+   - *Meus meses*: o cronograma com datas reais, encadeando as parcelas da
+     construtora e a prestação da Caixa pela entrega das chaves. Ele marca o
+     que pagou, informa o valor real do boleto e registra os aportes que fez —
+     o saldo devedor e a data de quitação se movem conforme cumpre (ou não) o
+     plano.
+   - *Planilha*: todas as prestações do financiamento, uma por linha, até a
+     quitação, com prestação, juros, amortização, seguros, aporte e saldo.
+     Exportável em CSV para o Excel.
+
+   O corretor entrega essa tela por um link — o caso vai codificado dentro do
+   próprio link e é importado no aparelho do cliente, sem servidor.
 
 ## Precisão dos cálculos
 

@@ -1,5 +1,65 @@
-// Wrapper fino sobre o Chart.js embarcado (assets/vendor/chart.min.js, sem CDN)
-// para os dois gráficos comparativos Cru vs Estratégico.
+// Wrapper fino sobre o Chart.js embarcado (assets/vendor/chart.min.js, sem CDN).
+
+const CINZA = "#a8b5cc";
+const GRADE = "#233255";
+const VERMELHO = "#ff8a8a";
+const VERDE = "#2fd680";
+const AZUL = "#3ba0ff";
+
+// Preenche uma série curta até o tamanho do gráfico repetindo o último valor.
+// Usado quando o cenário estratégico quita antes e a linha precisa continuar
+// no zero até o fim do eixo.
+export function padSerie(arr, tamanho) {
+  if (arr.length >= tamanho) return arr.slice(0, tamanho);
+  const ultimo = arr.length ? arr[arr.length - 1] : 0;
+  return arr.concat(Array(tamanho - arr.length).fill(ultimo));
+}
+
+// Marca visualmente onde o cliente está hoje. Feito como plugin do próprio
+// Chart.js para não precisar do pacote de anotações (o app não usa CDN).
+function pluginMarcadorHoje(indice, rotulo = "hoje") {
+  return {
+    id: "marcadorHoje",
+    afterDatasetsDraw(chart) {
+      if (indice === null || indice === undefined) return;
+      const x = chart.scales.x?.getPixelForValue(indice);
+      const area = chart.chartArea;
+      if (x === undefined || Number.isNaN(x) || !area) return;
+
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.beginPath();
+      ctx.setLineDash([5, 4]);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = AZUL;
+      ctx.moveTo(x, area.top);
+      ctx.lineTo(x, area.bottom);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = AZUL;
+      ctx.font = "600 11px -apple-system, system-ui, sans-serif";
+      ctx.textAlign = x > area.right - 40 ? "right" : "left";
+      ctx.fillText(rotulo, x > area.right - 40 ? x - 4 : x + 4, area.top + 12);
+      ctx.restore();
+    },
+  };
+}
+
+function eixos({ formatadorEixoY, tituloX = "Mês" }) {
+  return {
+    x: {
+      ticks: { color: CINZA, maxTicksLimit: 8, autoSkip: true },
+      grid: { color: GRADE },
+      title: { display: true, text: tituloX, color: CINZA },
+    },
+    y: {
+      ticks: { color: CINZA, callback: formatadorEixoY },
+      grid: { color: GRADE },
+      beginAtZero: true,
+    },
+  };
+}
 
 export function criarGraficoComparativo(canvasId, { labels, cru, estrategico, formatadorEixoY }) {
   return new Chart(document.getElementById(canvasId), {
@@ -10,7 +70,7 @@ export function criarGraficoComparativo(canvasId, { labels, cru, estrategico, fo
         {
           label: "Cenário cru",
           data: cru,
-          borderColor: "#ff8a8a",
+          borderColor: VERMELHO,
           backgroundColor: "transparent",
           pointRadius: 0,
           borderWidth: 3,
@@ -19,7 +79,7 @@ export function criarGraficoComparativo(canvasId, { labels, cru, estrategico, fo
         {
           label: "Cenário estratégico",
           data: estrategico,
-          borderColor: "#2fd680",
+          borderColor: VERDE,
           backgroundColor: "transparent",
           pointRadius: 0,
           borderWidth: 3,
@@ -31,17 +91,114 @@ export function criarGraficoComparativo(canvasId, { labels, cru, estrategico, fo
       responsive: true,
       interaction: { mode: "index", intersect: false },
       plugins: { legend: { display: false } },
-      scales: {
-        x: {
-          ticks: { color: "#a8b5cc", maxTicksLimit: 8 },
-          grid: { color: "#233255" },
-          title: { display: true, text: "Mês", color: "#a8b5cc" },
+      scales: eixos({ formatadorEixoY }),
+    },
+  });
+}
+
+/**
+ * Saldo devedor no controle do cliente: o que aconteceria pagando só a
+ * prestação mínima, contra o ritmo real dele, com o mês corrente marcado.
+ */
+export function criarGraficoSaldoControle(canvasId, { labels, minimo, atual, indiceHoje, formatadorEixoY, formatadorTooltip }) {
+  return new Chart(document.getElementById(canvasId), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Só a prestação mínima",
+          data: minimo,
+          borderColor: VERMELHO,
+          backgroundColor: "transparent",
+          pointRadius: 0,
+          borderWidth: 2,
+          borderDash: [6, 4],
+          tension: 0.15,
         },
-        y: {
-          ticks: { color: "#a8b5cc", callback: formatadorEixoY },
-          grid: { color: "#233255" },
+        {
+          label: "No seu ritmo",
+          data: atual,
+          borderColor: VERDE,
+          backgroundColor: "rgba(47, 214, 128, 0.12)",
+          fill: true,
+          pointRadius: 0,
+          borderWidth: 3,
+          tension: 0.15,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (itens) => (formatadorTooltip ? formatadorTooltip(itens[0].dataIndex) : itens[0].label),
+            label: (item) => `${item.dataset.label}: ${formatadorEixoY(item.parsed.y)}`,
+          },
         },
       },
+      scales: eixos({ formatadorEixoY }),
     },
+    plugins: [pluginMarcadorHoje(indiceHoje)],
+  });
+}
+
+/**
+ * Composição da prestação ao longo do tempo: quanto de cada parcela é juros e
+ * quanto abate a dívida. É o gráfico que faz o cliente entender por que
+ * antecipar parcela compensa — no começo quase tudo é juros.
+ */
+export function criarGraficoComposicao(canvasId, { labels, juros, amortizacao, indiceHoje, formatadorEixoY, formatadorTooltip }) {
+  return new Chart(document.getElementById(canvasId), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Juros",
+          data: juros,
+          borderColor: VERMELHO,
+          backgroundColor: "rgba(255, 138, 138, 0.55)",
+          // A camada de baixo preenche até o eixo...
+          fill: "origin",
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.15,
+        },
+        {
+          label: "Amortização (abate a dívida)",
+          data: amortizacao,
+          borderColor: VERDE,
+          backgroundColor: "rgba(47, 214, 128, 0.55)",
+          // ...e a de cima até a camada anterior, senão as duas pintam sobre
+          // o eixo e a sobreposição das transparências vira cinza.
+          fill: "-1",
+          pointRadius: 0,
+          borderWidth: 2,
+          tension: 0.15,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (itens) => (formatadorTooltip ? formatadorTooltip(itens[0].dataIndex) : itens[0].label),
+            label: (item) => `${item.dataset.label}: ${formatadorEixoY(item.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        ...eixos({ formatadorEixoY }),
+        y: { ...eixos({ formatadorEixoY }).y, stacked: true },
+      },
+    },
+    plugins: [pluginMarcadorHoje(indiceHoje)],
   });
 }

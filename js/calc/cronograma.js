@@ -267,3 +267,101 @@ export function resumoControle(cliente, hoje = new Date()) {
     quitacaoMesContrato: chaves ? chaves + prazoAtual - 1 : 0,
   };
 }
+
+/**
+ * Planilha completa do financiamento da Caixa, mês a mês até a quitação.
+ *
+ * Cada linha fecha por construção: juros + amortização + seguros = prestação.
+ * Expor os seguros como coluna própria é o que permite bater a prestação com
+ * o boleto do cliente sem parecer que a conta não soma.
+ *
+ * Reflete a trajetória ATUAL (com os aportes que o cliente registrou), e não
+ * o plano original — é a planilha da vida real dele.
+ */
+export function planilhaCaixa(cliente) {
+  const a = cliente.aprovacao;
+  const ac = cliente.acompanhamento || {};
+  const chaves = ac.mesEntregaChaves || 0;
+
+  const taxaMensal = taxaMensalCaixa(a.jurosNominalAnual, a.trAnual);
+  const seguros = segurosETarifasMensais({
+    primeiraPrestacaoDoc: a.primeiraPrestacaoDoc,
+    valorFinanciamento: a.valorFinanciamento,
+    prazoMeses: a.prazoMeses,
+    taxaMensal,
+    sistema: a.sistema,
+  });
+
+  const mesHoje = ac.dataBaseISO ? mesContratoHoje(ac.dataBaseISO) : 0;
+  const { meses } = simularComRealidade(cliente, {
+    mesContratoCorte: chaves ? mesHoje : 0,
+  });
+
+  const linhas = meses.map((m, idx) => {
+    const mesContrato = chaves ? chaves + idx : 0;
+    const registro = mesContrato ? registroDoMes(cliente, mesContrato) : null;
+    return {
+      n: m.mes,
+      mesContrato,
+      juros: m.juros,
+      amortizacao: m.amortizacao,
+      seguros,
+      prestacao: m.parcela + seguros,
+      aporte: m.aporteExtra,
+      saldo: m.saldoDevedor,
+      ehHoje: mesContrato > 0 && mesContrato === mesHoje,
+      pago: !!registro?.pago,
+    };
+  });
+
+  const totais = linhas.reduce(
+    (acc, l) => ({
+      juros: acc.juros + l.juros,
+      amortizacao: acc.amortizacao + l.amortizacao,
+      seguros: acc.seguros + l.seguros,
+      aportes: acc.aportes + l.aporte,
+      prestacoes: acc.prestacoes + l.prestacao,
+    }),
+    { juros: 0, amortizacao: 0, seguros: 0, aportes: 0, prestacoes: 0 }
+  );
+  totais.desembolso = totais.prestacoes + totais.aportes;
+
+  return { linhas, totais, segurosMensais: seguros, taxaMensal };
+}
+
+/**
+ * Séries para os gráficos do controle: o saldo se o cliente pagar só a
+ * prestação mínima, contra o saldo no ritmo atual dele.
+ */
+export function seriesControle(cliente) {
+  const a = cliente.aprovacao;
+  const ac = cliente.acompanhamento || {};
+  const chaves = ac.mesEntregaChaves || 0;
+  const mesHoje = ac.dataBaseISO ? mesContratoHoje(ac.dataBaseISO) : 0;
+
+  const taxaMensal = taxaMensalCaixa(a.jurosNominalAnual, a.trAnual);
+  const minimo = simular({
+    valorFinanciado: a.valorFinanciamento,
+    prazoMeses: a.prazoMeses,
+    taxaMensal,
+    sistema: a.sistema,
+    aportesExtras: new Map(),
+  });
+  const atual = simularComRealidade(cliente, { mesContratoCorte: chaves ? mesHoje : 0 }).meses;
+
+  // O gráfico acompanha o cenário mais longo (o mínimo), com a curva do
+  // ritmo atual terminando antes — é justamente isso que mostra a economia.
+  const tamanho = Math.max(minimo.length, atual.length);
+
+  return {
+    tamanho,
+    saldoMinimo: minimo.map((m) => m.saldoDevedor),
+    saldoAtual: atual.map((m) => m.saldoDevedor),
+    juros: atual.map((m) => m.juros),
+    amortizacao: atual.map((m) => m.amortizacao),
+    // Índice (0-based) do mês corrente dentro da amortização, ou null
+    indiceHoje: chaves && mesHoje >= chaves ? Math.min(mesHoje - chaves, tamanho - 1) : null,
+    prazoMinimo: minimo.length,
+    prazoAtual: atual.length,
+  };
+}

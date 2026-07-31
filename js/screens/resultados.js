@@ -7,7 +7,7 @@ import { entradaNecessaria, taxaEfetivaAnual } from "../calc/caixa.js";
 import { resumoEntrada, expandirParcelas } from "../calc/entrada.js";
 import { calcularJurosObra, totalJurosObra } from "../calc/evolucaoObra.js";
 import { calcularCenarios } from "../calc/cenarios.js";
-import { criarGraficoComparativo } from "../charts.js";
+import { criarGraficoComparativo, padSerie } from "../charts.js";
 
 function jurosAcumuladoSerie(meses) {
   let acc = 0;
@@ -15,12 +15,6 @@ function jurosAcumuladoSerie(meses) {
     acc += m.juros;
     return acc;
   });
-}
-
-function padSerie(arr, tamanho) {
-  if (arr.length >= tamanho) return arr.slice(0, tamanho);
-  const ultimo = arr.length ? arr[arr.length - 1] : 0;
-  return arr.concat(Array(tamanho - arr.length).fill(ultimo));
 }
 
 async function iniciar() {

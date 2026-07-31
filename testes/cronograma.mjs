@@ -15,8 +15,11 @@ import {
   resumoControle,
   aportesReais,
   simularComRealidade,
+  planilhaCaixa,
+  seriesControle,
 } from "../js/calc/cronograma.js";
 import { montarAportes } from "../js/calc/cenarios.js";
+import { planilhaParaCSV } from "../js/csv.js";
 import { gerarAportes13 } from "../js/calc/fgts.js";
 
 let falhas = 0;
@@ -297,6 +300,110 @@ console.log("\n=== Fonte única de aportes projetados ===");
   truthy(doPlano.length > 0, "plano gera aportes de 13º");
   // chaves em ago/2028 -> 1º dezembro é o 5º mês da amortização
   eq(doPlano[0].mes, 5, "13º do plano já respeita dezembro real");
+}
+
+console.log("\n=== Planilha das parcelas fecha por construção ===");
+{
+  const cliente = casoBase();
+  const { linhas, totais } = planilhaCaixa(cliente);
+
+  eq(linhas.length, 200, "Price com o plano quita em 200 parcelas", 0);
+  eq(linhas[0].n, 1, "primeira linha é a parcela 1");
+  eq(linhas[0].mesContrato, 25, "parcela 1 cai no mês 25 do contrato (entrega das chaves)");
+
+  // Cada linha tem de fechar: juros + amortização + seguros = prestação
+  const desfecha = linhas.filter(
+    (l) => Math.abs(l.juros + l.amortizacao + l.seguros - l.prestacao) > 0.01
+  );
+  eq(desfecha.length, 0, "toda linha fecha juros + amortização + seguros = prestação", 0);
+
+  // A prestação exibida na 1ª linha tem de bater com o documento da Caixa
+  eq(linhas[0].prestacao, 817.26, "prestação da 1ª linha = a do documento", 0.02);
+
+  // Amortização + aportes precisam zerar o financiamento
+  eq(
+    totais.amortizacao + totais.aportes,
+    cliente.aprovacao.valorFinanciamento,
+    "amortização + aportes zeram o valor financiado",
+    0.5
+  );
+  eq(linhas[linhas.length - 1].saldo, 0, "saldo da última parcela é zero", 0.01);
+
+  // O saldo tem de cair monotonicamente
+  let subiu = 0;
+  for (let i = 1; i < linhas.length; i++) if (linhas[i].saldo > linhas[i - 1].saldo + 0.01) subiu++;
+  eq(subiu, 0, "saldo devedor nunca sobe", 0);
+
+  console.log(`   juros R$ ${totais.juros.toFixed(2)} | seguros R$ ${totais.seguros.toFixed(2)} | desembolso R$ ${totais.desembolso.toFixed(2)}`);
+}
+
+console.log("\n=== Planilha em SAC ===");
+{
+  const cliente = casoBase();
+  cliente.aprovacao.sistema = "SAC";
+  const { linhas } = planilhaCaixa(cliente);
+
+  // Em SAC a amortização contratual é constante; nas linhas sem aporte ela
+  // tem de ser sempre PV/n
+  const esperada = cliente.aprovacao.valorFinanciamento / cliente.aprovacao.prazoMeses;
+  const foraDoPadrao = linhas
+    .slice(0, linhas.length - 1)
+    .filter((l) => Math.abs(l.amortizacao - esperada) > 0.01);
+  eq(foraDoPadrao.length, 0, "amortização SAC constante em todas as linhas", 0);
+
+  truthy(linhas[0].prestacao > linhas[linhas.length - 2].prestacao,
+    "prestação SAC é decrescente ao longo da planilha");
+  console.log(`   1ª prestação SAC R$ ${linhas[0].prestacao.toFixed(2)} -> penúltima R$ ${linhas[linhas.length - 2].prestacao.toFixed(2)}`);
+}
+
+console.log("\n=== Planilha reflete o aporte registrado ===");
+{
+  const cliente = casoBase();
+  const semAporte = planilhaCaixa(cliente).linhas.length;
+  cliente.acompanhamento.meses["30"] = { aporte: 30000 };
+  const { linhas, totais } = planilhaCaixa(cliente);
+
+  truthy(linhas.length < semAporte, "aporte registrado encurta a planilha");
+  const linhaAporte = linhas.find((l) => l.mesContrato === 30);
+  eq(linhaAporte.aporte, 30000, "o aporte aparece na linha do mês em que foi feito");
+  eq(totais.aportes >= 30000, true, "o aporte entra nos totais");
+  console.log(`   parcelas: ${semAporte} -> ${linhas.length}`);
+}
+
+console.log("\n=== Séries dos gráficos ===");
+{
+  const cliente = casoBase();
+  const s = seriesControle(cliente);
+  eq(s.prazoMinimo, 420, "cenário mínimo usa o prazo contratado inteiro", 0);
+  truthy(s.prazoAtual < s.prazoMinimo, "ritmo atual quita antes do prazo contratado");
+  eq(s.tamanho, 420, "eixo do gráfico acompanha o cenário mais longo", 0);
+  eq(s.saldoMinimo.length, 420, "série do mínimo tem um ponto por mês");
+  eq(s.juros.length, s.prazoAtual, "série de juros cobre o ritmo atual");
+  // Antes das chaves não há índice de hoje
+  eq(s.indiceHoje, null, "sem amortização iniciada, não há marcador de hoje");
+
+  // Com a amortização em curso, o marcador aponta o mês certo
+  const emCurso = seriesControle(casoBase());
+  truthy(emCurso.saldoMinimo[0] > emCurso.saldoMinimo[419], "saldo do mínimo cai ao longo do eixo");
+}
+
+console.log("\n=== CSV sai no padrão do Excel brasileiro ===");
+{
+  const cliente = casoBase();
+  const planilha = planilhaCaixa(cliente);
+  const csv = planilhaParaCSV(cliente, planilha);
+  const linhasCSV = csv.split("\r\n");
+
+  eq(linhasCSV.length, planilha.linhas.length + 2, "uma linha por parcela + cabeçalho + total", 0);
+  truthy(linhasCSV[0].startsWith("Parcela;Mes;Prestacao"), "cabeçalho separado por ponto-e-vírgula");
+  eq(linhasCSV[0].split(";").length, 8, "oito colunas no cabeçalho", 0);
+
+  const primeira = linhasCSV[1].split(";");
+  eq(primeira.length, 8, "oito colunas na primeira linha de dados", 0);
+  eq(primeira[1], "ago/2028", "coluna de mês traz a data real");
+  truthy(primeira[2].includes(","), "valores usam vírgula decimal");
+  truthy(!primeira[2].includes("."), "valores não usam ponto (quebraria o Excel pt-BR)");
+  truthy(linhasCSV[linhasCSV.length - 1].startsWith("TOTAL;"), "última linha é o total");
 }
 
 console.log(

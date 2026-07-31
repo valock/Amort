@@ -144,6 +144,17 @@ teste.
    valor que o próprio cliente acabou de digitar. Ver `simularComRealidade` e
    `aportePlanejado` em `js/calc/cronograma.js`.
 
+8. **Toda linha da planilha fecha por construção**: `juros + amortização +
+   seguros = prestação`, e a soma das amortizações mais os aportes zera o valor
+   financiado. Expor os seguros como coluna própria é o que permite bater a
+   prestação com o boleto sem parecer que a conta não soma. Coberto em
+   `testes/cronograma.mjs`.
+
+9. **CSV no padrão do Excel em português**: separador ponto-e-vírgula, vírgula
+   decimal e BOM UTF-8. Com vírgula de separador e ponto decimal, o Excel
+   brasileiro joga tudo numa coluna e o cliente acha que o arquivo veio
+   quebrado. Ver `js/csv.js`.
+
 ---
 
 ## Arquitetura
@@ -166,16 +177,19 @@ js/calc/           Matemática pura. Sem DOM, sem estado global.
   fgts.js            Acúmulo e saque bienal do FGTS, 13º salário
   cenarios.js        Fonte única dos aportes projetados + cenários comparados
   calendario.js      Mês do contrato <-> mês do calendário (só aqui há datas)
-  cronograma.js      Compromisso de cada mês e reação do saldo à realidade
+  cronograma.js      Compromisso de cada mês, planilha das parcelas e séries
+                     dos gráficos; reage ao que o cliente registrou
 
 js/screens/        Uma por tela. Liga o DOM ao js/calc. Sem matemática aqui.
 js/state.js        Modelo do cliente + migração entre versões do modelo
 js/storage.js      IndexedDB (persistência local)
 js/compartilhar.js Caso codificado no # da URL, para enviar ao cliente
+js/csv.js          Exportação da planilha (formato do Excel em português)
 js/ui.js           Widgets compartilhados (campos, listas, avisos)
 js/nav.js          Stepper dos passos
 js/format.js       Formatação e parsing de números em português
-js/charts.js       Wrapper sobre o Chart.js embarcado
+js/charts.js       Wrapper sobre o Chart.js embarcado, incluindo o marcador
+                   de "hoje" feito como plugin (o app não usa CDN)
 
 testes/            Scripts em Node, sem framework
 assets/vendor/     Chart.js embarcado (sem CDN — o app roda offline)
@@ -223,7 +237,7 @@ python3 -m http.server 8000     # e abra http://localhost:8000
 ```
 node testes/caso-caixa-real.mjs        # trava os números do documento oficial
 node testes/motor-amortizacao.mjs      # SAC/Price, FGTS, 13º, INCC, juros de obra
-node testes/cronograma.mjs             # datas, as duas fases e o controle mês a mês
+node testes/cronograma.mjs             # datas, as duas fases, planilha, gráficos e CSV
 node testes/verificar-anonimizacao.mjs # varre o repo por dado pessoal
 ```
 

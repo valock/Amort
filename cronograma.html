@@ -27,71 +27,169 @@
   </div>
 
   <div id="conteudo" style="display:none">
-    <!-- Painel de situação -->
-    <div class="result-card" id="cardProximo">
-      <div class="label" id="labelProximo">Próximo vencimento</div>
-      <div class="value" id="valorProximo">—</div>
-      <p class="hint" id="hintProximo"></p>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab ativa" data-aba="resumo">Resumo</button>
+      <button type="button" class="tab" data-aba="meses">Meus meses</button>
+      <button type="button" class="tab" data-aba="planilha">Planilha</button>
     </div>
 
-    <div class="section">
-      <h3>Onde você está</h3>
-      <div class="summary-line">
-        <span>Já pago (registrado)</span>
-        <span id="linhaPago">R$ 0</span>
+    <!-- ============ ABA RESUMO ============ -->
+    <section class="painel-aba" data-painel="resumo">
+      <div class="result-card" id="cardProximo">
+        <div class="label" id="labelProximo">Próximo vencimento</div>
+        <div class="value" id="valorProximo">—</div>
+        <p class="hint" id="hintProximo"></p>
       </div>
-      <div class="summary-line">
-        <span>Previsto até hoje</span>
-        <span id="linhaPrevisto">R$ 0</span>
-      </div>
-      <div class="summary-line" id="linhaAtrasoWrap">
-        <span>Em atraso</span>
-        <span id="linhaAtraso">R$ 0</span>
-      </div>
-      <div class="summary-line">
-        <span>Aportes que você já fez</span>
-        <span id="linhaAportes">R$ 0</span>
-      </div>
-      <div class="summary-line">
-        <span>Saldo devedor hoje</span>
-        <span id="linhaSaldo">—</span>
-      </div>
-    </div>
 
-    <div class="result-card highlight-good">
-      <div class="label">Sua quitação está prevista para</div>
-      <div class="value" id="valorQuitacao">—</div>
-      <p class="hint" id="hintQuitacao"></p>
-    </div>
-
-    <div class="section">
-      <div class="summary-line">
-        <span>Tempo que você já economizou</span>
-        <span class="total" id="linhaTempoEconomizado">—</span>
+      <div class="section">
+        <h3>Onde você está</h3>
+        <div class="summary-line">
+          <span>Já pago (registrado)</span>
+          <span id="linhaPago">R$ 0</span>
+        </div>
+        <div class="summary-line">
+          <span>Previsto até hoje</span>
+          <span id="linhaPrevisto">R$ 0</span>
+        </div>
+        <div class="summary-line" id="linhaAtrasoWrap">
+          <span>Em atraso</span>
+          <span id="linhaAtraso">R$ 0</span>
+        </div>
+        <div class="summary-line">
+          <span>Aportes que você já fez</span>
+          <span id="linhaAportes">R$ 0</span>
+        </div>
+        <div class="summary-line">
+          <span>Saldo devedor hoje</span>
+          <span id="linhaSaldo">—</span>
+        </div>
       </div>
-      <div class="summary-line">
-        <span>Juros que deixa de pagar</span>
-        <span class="total" id="linhaEconomiaJuros">R$ 0</span>
-      </div>
-      <p class="hint">Comparado a pagar só a prestação mínima até o fim do prazo.</p>
-    </div>
 
-    <!-- Navegação por ano -->
-    <div class="section">
-      <div class="year-nav">
-        <button type="button" class="btn btn-secondary" id="btn-ano-anterior">◀</button>
-        <div class="year-label" id="rotuloAno">—</div>
-        <button type="button" class="btn btn-secondary" id="btn-ano-proximo">▶</button>
+      <!-- Quanto do financiamento já virou seu -->
+      <div class="section">
+        <h3>Quanto da dívida você já quitou</h3>
+        <div class="barra-progresso">
+          <div class="barra-preenchida" id="barraQuitado"></div>
+        </div>
+        <div class="barra-legenda">
+          <span id="barraTextoEsq">—</span>
+          <span id="barraTextoDir">—</span>
+        </div>
       </div>
-      <button type="button" class="btn btn-ghost" id="btn-ir-hoje" style="width:100%">Ir para o mês atual</button>
-    </div>
 
-    <div id="lista-meses"></div>
+      <div class="result-card highlight-good">
+        <div class="label">Sua quitação está prevista para</div>
+        <div class="value" id="valorQuitacao">—</div>
+        <p class="hint" id="hintQuitacao"></p>
+      </div>
+
+      <div class="section">
+        <div class="summary-line">
+          <span>Tempo que você já economizou</span>
+          <span class="total" id="linhaTempoEconomizado">—</span>
+        </div>
+        <div class="summary-line">
+          <span>Juros que deixa de pagar</span>
+          <span class="total" id="linhaEconomiaJuros">R$ 0</span>
+        </div>
+        <p class="hint">Comparado a pagar só a prestação mínima até o fim do prazo.</p>
+      </div>
+
+      <div class="chart-box">
+        <h3>Sua dívida caindo ao longo do tempo</h3>
+        <canvas id="graficoSaldo" height="230"></canvas>
+        <div class="chart-legend">
+          <span class="cru">Só a prestação mínima</span>
+          <span class="estrategico">No seu ritmo</span>
+        </div>
+        <p class="hint" id="hintGraficoSaldo"></p>
+      </div>
+
+      <div class="chart-box">
+        <h3>Para onde vai cada prestação</h3>
+        <canvas id="graficoComposicao" height="230"></canvas>
+        <div class="chart-legend">
+          <span class="cru">Juros (custo do dinheiro)</span>
+          <span class="estrategico">Amortização (abate a dívida)</span>
+        </div>
+        <p class="hint" id="hintGraficoComposicao"></p>
+      </div>
+    </section>
+
+    <!-- ============ ABA MEUS MESES ============ -->
+    <section class="painel-aba" data-painel="meses" hidden>
+      <div class="section">
+        <div class="year-nav">
+          <button type="button" class="btn btn-secondary" id="btn-ano-anterior">◀</button>
+          <div class="year-label" id="rotuloAno">—</div>
+          <button type="button" class="btn btn-secondary" id="btn-ano-proximo">▶</button>
+        </div>
+        <button type="button" class="btn btn-ghost" id="btn-ir-hoje" style="width:100%">Ir para o mês atual</button>
+      </div>
+      <div id="lista-meses"></div>
+    </section>
+
+    <!-- ============ ABA PLANILHA ============ -->
+    <section class="painel-aba" data-painel="planilha" hidden>
+      <div class="section">
+        <h3>Planilha do financiamento</h3>
+        <p class="hint" style="margin-bottom:14px">
+          Todas as prestações da Caixa, uma por linha, até a quitação. Cada linha fecha
+          assim: <strong>juros + amortização + seguros = prestação</strong>.
+          Arraste a tabela para o lado para ver todas as colunas.
+        </p>
+        <div class="summary-line">
+          <span>Sistema</span>
+          <span id="planilhaSistema">—</span>
+        </div>
+        <div class="summary-line">
+          <span>Parcelas até quitar</span>
+          <span id="planilhaQtd">—</span>
+        </div>
+        <div class="summary-line">
+          <span>Total de juros</span>
+          <span id="planilhaJuros">R$ 0</span>
+        </div>
+        <div class="summary-line">
+          <span>Total de seguros e tarifas</span>
+          <span id="planilhaSeguros">R$ 0</span>
+        </div>
+        <div class="summary-line">
+          <span class="total">Desembolso total do financiamento</span>
+          <span class="total" id="planilhaDesembolso">R$ 0</span>
+        </div>
+        <button type="button" class="btn btn-secondary" id="btn-csv" style="width:100%;margin-top:16px">
+          Baixar planilha (CSV para Excel)
+        </button>
+      </div>
+
+      <div class="tabela-wrap">
+        <table class="planilha" id="tabelaPlanilha">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Mês</th>
+              <th>Prestação</th>
+              <th>Juros</th>
+              <th>Amortiz.</th>
+              <th>Seguros</th>
+              <th>Aporte</th>
+              <th>Saldo devedor</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint" id="notaPlanilha"></p>
+    </section>
+
   </div>
 </main>
 
 <nav class="stepper" style="display:none"></nav>
 
+<script src="assets/vendor/chart.min.js"></script>
 <script type="module" src="js/screens/cronograma.js"></script>
 <script>
 if ("serviceWorker" in navigator) {
