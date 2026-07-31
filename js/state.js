@@ -9,7 +9,7 @@ export function clienteVazio(nome) {
     id: novoId(),
     nome: nome || "Novo cliente",
     criadoEm: new Date().toISOString(),
-    versaoModelo: 3,
+    versaoModelo: 4,
     aprovacao: {
       valorImovel: 0,
       valorAvaliacao: 0,
@@ -43,6 +43,13 @@ export function clienteVazio(nome) {
       usar13: true,
       aportesAvulsos: [],
     },
+    // Controle mês a mês do cliente. `meses` é esparso: só guarda os meses em
+    // que ele registrou algo, para o caso salvo não crescer com 420 entradas.
+    acompanhamento: {
+      dataBaseISO: "",
+      mesEntregaChaves: 0,
+      meses: {},
+    },
   };
 }
 
@@ -50,11 +57,25 @@ export function clienteVazio(nome) {
 // anual) continuam abrindo: o que dá para reaproveitar é migrado, o resto
 // entra com o padrão novo.
 export function migrarCliente(cliente) {
-  if (!cliente || cliente.versaoModelo === 3) return cliente;
+  if (!cliente || cliente.versaoModelo === 4) return cliente;
+
+  // v3 -> v4: ganha o bloco de acompanhamento mês a mês
+  if (cliente.versaoModelo === 3) {
+    return {
+      ...cliente,
+      versaoModelo: 4,
+      acompanhamento: cliente.acompanhamento || { dataBaseISO: "", mesEntregaChaves: 0, meses: {} },
+    };
+  }
 
   // v2 -> v3: parcelas soltas viram série mensal + balões
   if (cliente.versaoModelo === 2) {
-    const atualizado = { ...cliente, versaoModelo: 3 };
+    const atualizado = { ...cliente, versaoModelo: 4 };
+    atualizado.acompanhamento = cliente.acompanhamento || {
+      dataBaseISO: "",
+      mesEntregaChaves: 0,
+      meses: {},
+    };
     const parcelas = cliente.entrada?.parcelas || [];
     const mensais = parcelas.filter((p) => (p.tipo || "mensal") === "mensal");
     const baloes = parcelas.filter((p) => p.tipo === "balao");
@@ -105,6 +126,17 @@ export function migrarCliente(cliente) {
   return base;
 }
 
+// Garante os blocos que versões novas passaram a exigir, para telas que leem
+// o cliente não precisarem checar cada campo.
+export function normalizarCliente(cliente) {
+  if (!cliente) return cliente;
+  if (!cliente.acompanhamento) {
+    cliente.acompanhamento = { dataBaseISO: "", mesEntregaChaves: 0, meses: {} };
+  }
+  if (!cliente.acompanhamento.meses) cliente.acompanhamento.meses = {};
+  return cliente;
+}
+
 export function idClienteDaURL() {
   return new URLSearchParams(window.location.search).get("cliente");
 }
@@ -126,7 +158,7 @@ export async function carregarClienteAtualOuVoltar() {
     window.location.href = "index.html";
     return null;
   }
-  const cliente = migrarCliente(bruto);
+  const cliente = normalizarCliente(migrarCliente(bruto));
   if (cliente !== bruto) await salvarCliente(cliente);
   return cliente;
 }

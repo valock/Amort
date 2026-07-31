@@ -1,5 +1,5 @@
 import { carregarClienteAtualOuVoltar, salvarESeguir } from "../state.js";
-import { fmtMoeda, fmtPct, paraInput } from "../format.js";
+import { fmtMoeda, fmtPct, paraInput, parseNum } from "../format.js";
 import { renderStepper } from "../nav.js";
 import { ligarCampo, renderListaValores, proximoMes, setTexto, renderAvisos } from "../ui.js";
 import { entradaNecessaria } from "../calc/caixa.js";
@@ -12,6 +12,7 @@ import {
   valorParcelaParaFechar,
 } from "../calc/entrada.js";
 import { calcularJurosObra, totalJurosObra } from "../calc/evolucaoObra.js";
+import { rotuloMes, mesAtualISO } from "../calc/calendario.js";
 
 async function iniciar() {
   const cliente = await carregarClienteAtualOuVoltar();
@@ -27,6 +28,23 @@ async function iniciar() {
   setTexto("cardEntradaNecessaria", fmtMoeda(precisa));
   setTexto("saidaRenda", a.rendaBruta ? fmtMoeda(a.rendaBruta) : "—");
   setTexto("saidaPrestacao", a.primeiraPrestacaoDoc ? fmtMoeda(a.primeiraPrestacaoDoc) : "—");
+
+  // Datas do contrato: alimentam o controle mês a mês do cliente
+  const ac = cliente.acompanhamento;
+  const inputData = document.getElementById("dataBase");
+  inputData.value = ac.dataBaseISO || mesAtualISO();
+  ac.dataBaseISO = inputData.value;
+  inputData.addEventListener("change", () => {
+    ac.dataBaseISO = inputData.value;
+    recalcular();
+  });
+
+  const inputChaves = document.getElementById("mesEntregaChaves");
+  inputChaves.value = ac.mesEntregaChaves || "";
+  inputChaves.addEventListener("input", () => {
+    ac.mesEntregaChaves = Math.round(parseNum(inputChaves.value));
+    recalcular();
+  });
 
   ligarCampo("sinal", e, "sinal", { aoMudar: recalcular });
   ligarCampo("fgtsNaEntrada", e, "fgtsNaEntrada", { aoMudar: recalcular });
@@ -67,6 +85,17 @@ async function iniciar() {
 
   function recalcular() {
     const parcelas = expandirParcelas(e);
+
+    const hint = document.getElementById("hintChaves");
+    if (ac.dataBaseISO && ac.mesEntregaChaves > 0) {
+      hint.textContent = `1ª parcela em ${rotuloMes(ac.dataBaseISO, 1, {
+        comAnoCompleto: true,
+      })}; 1ª prestação da Caixa em ${rotuloMes(ac.dataBaseISO, ac.mesEntregaChaves, {
+        comAnoCompleto: true,
+      })}.`;
+    } else {
+      hint.textContent = "Necessário para gerar o controle mês a mês do cliente.";
+    }
 
     const resumo = resumoEntrada({
       entradaNecessaria: precisa,

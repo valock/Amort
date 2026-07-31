@@ -169,8 +169,8 @@ p.hint {
   outline: none;
   border-color: var(--accent);
 }
-.list-row .remove-btn { flex: 0 0 auto; }
 .list-row .remove-btn {
+  flex: 0 0 auto;
   background: none;
   border: none;
   color: var(--danger);
@@ -222,7 +222,7 @@ button.btn-ghost {
   color: #ffb3b3;
 }
 
-/* Cards de resultado — Tela 3 */
+/* Cards de destaque dos resultados */
 .result-card {
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -285,7 +285,7 @@ button.btn-ghost {
 .chart-legend .cru::before { background: #ff8a8a; }
 .chart-legend .estrategico::before { background: var(--good); }
 
-/* Stepper de navegação entre as 3 telas */
+/* Stepper de navegação entre os passos */
 .stepper {
   position: fixed;
   bottom: 0;
@@ -336,3 +336,119 @@ button.btn-ghost {
 @media (min-width: 640px) {
   .field-row { gap: 16px; }
 }
+
+/* ---- Controle mês a mês (cronograma) ---- */
+
+.year-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.year-nav button { flex: 0 0 auto; padding: 12px 18px; }
+.year-label {
+  flex: 1;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.mes-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.mes-card.pago { border-left-color: var(--good); }
+.mes-card.atrasado { border-left-color: var(--danger); }
+.mes-card.atual {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--surface-2);
+}
+
+.mes-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.mes-data {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+.mes-desc {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.mes-valor {
+  font-size: 1.3rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mes-detalhe {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  padding: 4px 0 0;
+}
+
+.mes-acoes { margin-top: 12px; }
+.btn-pago {
+  width: 100%;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.btn-pago.ativo {
+  background: var(--good-bg);
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.mes-campo { margin-top: 12px; }
+.mes-campo label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+}
+.mes-campo input {
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text);
+}
+.mes-campo input:focus { outline: none; border-color: var(--accent); }
+
+.mes-saldo {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.result-card.highlight-atencao {
+  background: var(--warn-bg);
+  border-color: var(--warn);
+}
+.result-card.highlight-atencao .value { color: var(--warn); }
+
+/* O stepper agora tem 5 passos: reduz para caber em tela estreita */
+.stepper a { font-size: 0.82rem; padding: 10px 2px; }

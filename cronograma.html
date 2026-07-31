@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Meu controle de pagamentos</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="assets/icons/icon-192.png" />
+<meta name="theme-color" content="#0f172a" />
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<main>
+  <h1 id="nome-cliente">Meu controle</h1>
+  <h2 id="subtitulo">Mês a mês do seu imóvel</h2>
+
+  <!-- Quando falta configurar as datas -->
+  <div id="aviso-configurar" class="section" style="display:none">
+    <h3>Falta definir as datas</h3>
+    <p class="hint" style="margin-bottom:16px">
+      Para montar o cronograma, o app precisa saber em que mês começam os pagamentos
+      e em que mês as chaves são entregues. Preencha no Passo 2.
+    </p>
+    <a class="btn btn-primary" id="link-configurar" href="#" style="display:block;text-align:center;text-decoration:none">
+      Definir datas no Passo 2
+    </a>
+  </div>
+
+  <div id="conteudo" style="display:none">
+    <!-- Painel de situação -->
+    <div class="result-card" id="cardProximo">
+      <div class="label" id="labelProximo">Próximo vencimento</div>
+      <div class="value" id="valorProximo">—</div>
+      <p class="hint" id="hintProximo"></p>
+    </div>
+
+    <div class="section">
+      <h3>Onde você está</h3>
+      <div class="summary-line">
+        <span>Já pago (registrado)</span>
+        <span id="linhaPago">R$ 0</span>
+      </div>
+      <div class="summary-line">
+        <span>Previsto até hoje</span>
+        <span id="linhaPrevisto">R$ 0</span>
+      </div>
+      <div class="summary-line" id="linhaAtrasoWrap">
+        <span>Em atraso</span>
+        <span id="linhaAtraso">R$ 0</span>
+      </div>
+      <div class="summary-line">
+        <span>Aportes que você já fez</span>
+        <span id="linhaAportes">R$ 0</span>
+      </div>
+      <div class="summary-line">
+        <span>Saldo devedor hoje</span>
+        <span id="linhaSaldo">—</span>
+      </div>
+    </div>
+
+    <div class="result-card highlight-good">
+      <div class="label">Sua quitação está prevista para</div>
+      <div class="value" id="valorQuitacao">—</div>
+      <p class="hint" id="hintQuitacao"></p>
+    </div>
+
+    <div class="section">
+      <div class="summary-line">
+        <span>Tempo que você já economizou</span>
+        <span class="total" id="linhaTempoEconomizado">—</span>
+      </div>
+      <div class="summary-line">
+        <span>Juros que deixa de pagar</span>
+        <span class="total" id="linhaEconomiaJuros">R$ 0</span>
+      </div>
+      <p class="hint">Comparado a pagar só a prestação mínima até o fim do prazo.</p>
+    </div>
+
+    <!-- Navegação por ano -->
+    <div class="section">
+      <div class="year-nav">
+        <button type="button" class="btn btn-secondary" id="btn-ano-anterior">◀</button>
+        <div class="year-label" id="rotuloAno">—</div>
+        <button type="button" class="btn btn-secondary" id="btn-ano-proximo">▶</button>
+      </div>
+      <button type="button" class="btn btn-ghost" id="btn-ir-hoje" style="width:100%">Ir para o mês atual</button>
+    </div>
+
+    <div id="lista-meses"></div>
+  </div>
+</main>
+
+<nav class="stepper" style="display:none"></nav>
+
+<script type="module" src="js/screens/cronograma.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
+}
+</script>
+</body>
+</html>

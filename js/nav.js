@@ -1,10 +1,11 @@
 import { linkComCliente } from "./state.js";
 
 const PASSOS = [
-  { url: "index.html", rotulo: "1. Caixa" },
-  { url: "entrada.html", rotulo: "2. Entrada" },
-  { url: "estrategia.html", rotulo: "3. Estratégia" },
-  { url: "resultados.html", rotulo: "4. Resultado" },
+  { url: "index.html", rotulo: "Caixa" },
+  { url: "entrada.html", rotulo: "Entrada" },
+  { url: "estrategia.html", rotulo: "Plano" },
+  { url: "resultados.html", rotulo: "Resultado" },
+  { url: "cronograma.html", rotulo: "Controle" },
 ];
 
 export function renderStepper(passoAtualUrl, clienteId) {

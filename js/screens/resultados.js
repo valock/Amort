@@ -1,7 +1,8 @@
 import { carregarClienteAtualOuVoltar, linkComCliente } from "../state.js";
 import { fmtMoeda, fmtPct, fmtPrazo } from "../format.js";
 import { renderStepper } from "../nav.js";
-import { setTexto } from "../ui.js";
+import { setTexto, renderAvisos } from "../ui.js";
+import { gerarLinkCompartilhavel, textoWhatsApp } from "../compartilhar.js";
 import { entradaNecessaria, taxaEfetivaAnual } from "../calc/caixa.js";
 import { resumoEntrada, expandirParcelas } from "../calc/entrada.js";
 import { calcularJurosObra, totalJurosObra } from "../calc/evolucaoObra.js";
@@ -92,6 +93,8 @@ async function iniciar() {
       ? `Quita em ${fmtPrazo(c.prazoEstrategico)} no lugar de ${fmtPrazo(c.prazoCru)}.`
       : "";
 
+  configurarCompartilhamento(cliente);
+
   // Gráficos
   const tamanho = Math.max(c.cru.length, c.estrategico.length);
   if (tamanho > 0) {
@@ -111,6 +114,49 @@ async function iniciar() {
       formatadorEixoY: (v) => fmtMoeda(v),
     });
   }
+}
+
+function configurarCompartilhamento(cliente) {
+  const ac = cliente.acompanhamento || {};
+  const pronto = !!(ac.dataBaseISO && ac.mesEntregaChaves);
+
+  document.getElementById("link-cronograma").href = linkComCliente("cronograma.html", cliente.id);
+
+  if (!pronto) {
+    renderAvisos("aviso-compartilhar", [
+      {
+        tipo: "atencao",
+        texto:
+          "Defina no Passo 2 o mês da 1ª parcela e o mês de entrega das chaves. Sem essas datas o cronograma não tem como ser montado.",
+      },
+    ]);
+  }
+
+  const link = gerarLinkCompartilhavel(cliente);
+
+  document.getElementById("btn-whatsapp").addEventListener("click", () => {
+    const texto = encodeURIComponent(textoWhatsApp(cliente, link));
+    window.open(`https://wa.me/?text=${texto}`, "_blank");
+  });
+
+  const btnCopiar = document.getElementById("btn-copiar");
+  btnCopiar.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(link);
+      btnCopiar.textContent = "✓ Link copiado";
+    } catch {
+      // Sem permissão de clipboard (comum em http): mostra o link para copiar à mão
+      btnCopiar.textContent = "Copie o link abaixo";
+      const area = document.createElement("textarea");
+      area.value = link;
+      area.rows = 3;
+      area.style.cssText =
+        "width:100%;margin-top:10px;font-size:0.8rem;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--bg-soft);color:var(--text)";
+      btnCopiar.after(area);
+      area.select();
+    }
+    setTimeout(() => (btnCopiar.textContent = "Copiar link"), 3000);
+  });
 }
 
 iniciar();

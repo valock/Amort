@@ -5,10 +5,29 @@
 import { simular, aportesPorMes, totalJuros, prazoEfetivoMeses } from "./amortizacao.js";
 import { gerarAportesFGTS, gerarAportes13, combinarAportes } from "./fgts.js";
 import { taxaMensalCaixa, segurosETarifasMensais } from "./caixa.js";
+import { mesCalendario } from "./calendario.js";
 
+/**
+ * Aportes que o PLANO prevê, na linha do tempo da amortização (mês 1 = 1ª
+ * prestação da Caixa).
+ *
+ * Esta é a única função que monta a lista de aportes projetados. Tanto a tela
+ * de Resultado quanto o controle mês a mês passam por aqui — se cada uma
+ * montasse a sua, as duas mostrariam economias diferentes para o mesmo caso.
+ */
 export function montarAportes(cliente) {
   const e = cliente.estrategia;
   const prazoMeses = cliente.aprovacao.prazoMeses;
+
+  // Com as datas do contrato definidas, o 13º cai em dezembro de verdade,
+  // e não a cada 12 meses de contrato.
+  const ac = cliente.acompanhamento || {};
+  let mesCalendarioInicial;
+  if (ac.dataBaseISO && ac.mesEntregaChaves) {
+    const c = mesCalendario(ac.dataBaseISO, ac.mesEntregaChaves);
+    if (c) mesCalendarioInicial = c.mes;
+  }
+
   return combinarAportes(
     e.usarFGTS
       ? gerarAportesFGTS({
@@ -17,7 +36,7 @@ export function montarAportes(cliente) {
           intervaloSaqueMeses: e.intervaloSaqueFGTSMeses || 24,
         })
       : [],
-    e.usar13 ? gerarAportes13(e.valor13, prazoMeses) : [],
+    e.usar13 ? gerarAportes13(e.valor13, prazoMeses, { mesCalendarioInicial }) : [],
     e.aportesAvulsos || []
   );
 }

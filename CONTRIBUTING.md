@@ -74,7 +74,9 @@ valor do imóvel = financiamento (Caixa) + subsídio + entrada (construtora)
   por mês. Serve para duas coisas neste app: compor a **entrada** e, depois das
   chaves, **amortizar** o financiamento. O saque para amortização respeita um
   intervalo mínimo (o app usa 24 meses como padrão configurável).
-- **13º salário**: salário extra anual. Modelado como aporte todo mês 12, 24, 36…
+- **13º salário**: salário extra anual, pago em dezembro. Quando as datas do
+  contrato estão definidas, o app lança o aporte em **dezembro de verdade**, não
+  a cada 12 meses de contrato — é o que o cliente vê no controle mês a mês.
 - **SAC** (Sistema de Amortização Constante): amortização fixa, parcela
   decrescente.
 - **Price** (Tabela Price): parcela fixa, amortização crescente.
@@ -129,6 +131,19 @@ teste.
    juros de obra e acúmulo de FGTS (que ignora o rendimento do fundo) são
    projeções. O corretor precisa poder dizer isso ao cliente.
 
+6. **Aportes projetados saem de um lugar só**: `montarAportes` em
+   `js/calc/cenarios.js`. A tela de Resultado e o controle mês a mês consomem
+   a mesma função — se cada uma montasse a sua lista, as duas mostrariam
+   economias diferentes para o mesmo caso.
+
+7. **No controle mês a mês, o que o cliente registrou sempre vale.** Um aporte
+   registrado conta mesmo que o contrato ainda não tenha começado. Um aporte
+   que o plano previa, em mês já vencido e que o cliente não registrou, é
+   descartado — o controle tem de empurrar a quitação para frente em vez de
+   fingir que foi cumprido. E o rótulo "o plano previa" nunca pode ecoar o
+   valor que o próprio cliente acabou de digitar. Ver `simularComRealidade` e
+   `aportePlanejado` em `js/calc/cronograma.js`.
+
 ---
 
 ## Arquitetura
@@ -137,9 +152,10 @@ Site estático, sem build, sem dependências de runtime. Basta servir a pasta.
 
 ```
 index.html         Passo 1 — aprovação da Caixa (+ lista de clientes salvos)
-entrada.html       Passo 2 — entrada com a construtora
+entrada.html       Passo 2 — entrada com a construtora e datas do contrato
 estrategia.html    Passo 3 — FGTS, 13º e aportes avulsos
-resultados.html    Passo 4 — economia, tempo poupado e gráficos
+resultados.html    Passo 4 — economia, tempo poupado, gráficos e envio do link
+cronograma.html    Passo 5 — controle mês a mês (a tela do cliente)
 
 js/calc/           Matemática pura. Sem DOM, sem estado global.
   caixa.js           Derivações do documento oficial + convenção de taxa
@@ -148,13 +164,16 @@ js/calc/           Matemática pura. Sem DOM, sem estado global.
   incc.js            Correção composta pelo INCC
   evolucaoObra.js    Juros de obra sobre o saldo liberado
   fgts.js            Acúmulo e saque bienal do FGTS, 13º salário
-  cenarios.js        Junta tudo nos dois cenários comparados
+  cenarios.js        Fonte única dos aportes projetados + cenários comparados
+  calendario.js      Mês do contrato <-> mês do calendário (só aqui há datas)
+  cronograma.js      Compromisso de cada mês e reação do saldo à realidade
 
 js/screens/        Uma por tela. Liga o DOM ao js/calc. Sem matemática aqui.
 js/state.js        Modelo do cliente + migração entre versões do modelo
 js/storage.js      IndexedDB (persistência local)
+js/compartilhar.js Caso codificado no # da URL, para enviar ao cliente
 js/ui.js           Widgets compartilhados (campos, listas, avisos)
-js/nav.js          Stepper dos 4 passos
+js/nav.js          Stepper dos passos
 js/format.js       Formatação e parsing de números em português
 js/charts.js       Wrapper sobre o Chart.js embarcado
 
@@ -204,15 +223,17 @@ python3 -m http.server 8000     # e abra http://localhost:8000
 ```
 node testes/caso-caixa-real.mjs        # trava os números do documento oficial
 node testes/motor-amortizacao.mjs      # SAC/Price, FGTS, 13º, INCC, juros de obra
+node testes/cronograma.mjs             # datas, as duas fases e o controle mês a mês
 node testes/verificar-anonimizacao.mjs # varre o repo por dado pessoal
 ```
 
 Não há framework de teste: são scripts Node que imprimem `OK`/`FALHA` e saem
 com código diferente de zero se algo quebrar.
 
-**Antes de abrir um PR:** rode os três scripts, e teste o fluxo dos 4 passos no
+**Antes de abrir um PR:** rode os quatro scripts e teste o fluxo dos 5 passos no
 navegador (criar cliente → preencher → voltar pelo stepper e conferir que os
-dados persistiram).
+dados persistiram → gerar o link e abri-lo numa janela anônima, que simula o
+aparelho do cliente).
 
 ## Deploy
 

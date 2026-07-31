@@ -10,7 +10,7 @@ estratégica economiza depois das chaves.
 
 Cada cliente é um caso salvo só no dispositivo — nada é enviado a servidores.
 
-## Fluxo (4 passos)
+## Fluxo (5 passos)
 
 1. **O que a Caixa aprovou** — campos com os mesmos nomes do documento oficial
    (valor de compra e venda, financiamento, subsídio, prazo, 1ª prestação,
@@ -23,6 +23,12 @@ Cada cliente é um caso salvo só no dispositivo — nada é enviado a servidore
    avulsos, todos abatendo o **prazo** e não a parcela.
 4. **O resultado** — economia de juros, tempo poupado, seguros evitados e dois
    gráficos comparando o cenário sem amortizar com o estratégico.
+5. **O controle mês a mês** — o cronograma com datas reais, encadeando as
+   parcelas da construtora e a prestação da Caixa pela entrega das chaves. O
+   cliente marca o que pagou, registra os aportes que realmente fez, e vê o
+   saldo devedor e a data de quitação se moverem conforme cumpre (ou não) o
+   plano. O corretor entrega essa tela por um link — o caso vai codificado
+   dentro do próprio link e é importado no aparelho do cliente, sem servidor.
 
 ## Precisão dos cálculos
 
@@ -50,6 +56,7 @@ acúmulo de FGTS sem rendimento do fundo).
 ```
 node testes/caso-caixa-real.mjs         # trava os números do documento oficial
 node testes/motor-amortizacao.mjs       # SAC/Price, FGTS, 13º, INCC, juros de obra
+node testes/cronograma.mjs              # datas, as duas fases e o controle mês a mês
 node testes/verificar-anonimizacao.mjs  # varre o repo por dado pessoal
 ```
 

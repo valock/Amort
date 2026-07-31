@@ -1,13 +1,14 @@
 // Service worker cache-first: depois do primeiro load, o app inteiro funciona
 // sem internet — essencial pra mesa de negociação sem sinal.
 
-const CACHE_NAME = "acelerador-quitacao-v2";
+const CACHE_NAME = "acelerador-quitacao-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./entrada.html",
   "./estrategia.html",
   "./resultados.html",
+  "./cronograma.html",
   "./manifest.webmanifest",
   "./assets/css/style.css",
   "./assets/vendor/chart.min.js",
@@ -19,6 +20,7 @@ const APP_SHELL = [
   "./js/nav.js",
   "./js/ui.js",
   "./js/charts.js",
+  "./js/compartilhar.js",
   "./js/calc/incc.js",
   "./js/calc/evolucaoObra.js",
   "./js/calc/amortizacao.js",
@@ -26,10 +28,13 @@ const APP_SHELL = [
   "./js/calc/caixa.js",
   "./js/calc/entrada.js",
   "./js/calc/cenarios.js",
+  "./js/calc/calendario.js",
+  "./js/calc/cronograma.js",
   "./js/screens/aprovacao.js",
   "./js/screens/entrada.js",
   "./js/screens/estrategia.js",
   "./js/screens/resultados.js",
+  "./js/screens/cronograma.js",
 ];
 
 self.addEventListener("install", (event) => {
